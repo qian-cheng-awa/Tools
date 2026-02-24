@@ -1848,6 +1848,7 @@ local NewSingal = function(remote,signal,...)
 		end
 		if blockcheck then return end
 	end
+	return (HookedSingals[remote])(remote,...)
 end
 
 local newnamecall = newcclosure(function(...)
@@ -1969,7 +1970,6 @@ local function addsignal(obj)
 								OldSignal[obj] = v.Function
 								HookedSingals[obj] = hookfunction(v.Function, function(...)
 									NewSingal(obj,"OnClientEvent",...)
-									return HookedSingals[obj](...)
 								end)
 							else
 								task.spawn(function()
@@ -1980,7 +1980,6 @@ local function addsignal(obj)
 											OldSignal[obj] = v.Function
 											HookedSingals[obj] = hookfunction(v.Function, function(...)
 												NewSingal(obj,"OnClientEvent",...)
-												return HookedSingals[obj](...)
 											end)
 											break
 										end
@@ -1999,7 +1998,6 @@ local function addsignal(obj)
 				OldSignal[obj] = v.Function
 				HookedSingals[obj] = hookfunction(v.Function, function(...)
 					NewSingal(obj,"OnClientEvent",...)
-					return HookedSingals[obj](...)
 				end)
 			else
 				task.spawn(function()
@@ -2010,7 +2008,6 @@ local function addsignal(obj)
 							OldSignal[obj] = v.Function
 							HookedSingals[obj] = hookfunction(v.Function, function(...)
 								NewSingal(obj,"OnClientEvent",...)
-								return HookedSingals[obj](...)
 							end)
 							break
 						end
@@ -2023,7 +2020,6 @@ local function addsignal(obj)
 			OldSignal[obj] = getcallbackmember(obj,"OnClientInvoke")
 			HookedSingals[obj] = hookfunction(getcallbackmember(obj,"OnClientInvoke"), function(...)
 				NewSingal(obj,"OnClientInvoke",...)
-				return HookedSingals[obj](...)
 			end)
 		else
 			task.spawn(function()
@@ -2034,7 +2030,6 @@ local function addsignal(obj)
 						OldSignal[obj] = getcallbackmember(obj,"OnClientInvoke")
 						HookedSingals[obj] = hookfunction(getcallbackmember(obj,"OnClientInvoke"), function(...)
 							NewSingal(obj,"OnClientInvoke",...)
-							return HookedSingals[obj](...)
 						end)
 						break
 					end
@@ -2245,7 +2240,7 @@ newButton("Run Code",
 					if selected.metamethod ~= "_connect" then
 						returnvalue = Remote:InvokeServer(unpack(selected.args))
 					else
-						returnvalue = (HookedSingals[Remote] or getcallbackmember(Remote,"OnClientInvoke"))(unpack(selected.args))
+						returnvalue = (HookedSingals[Remote] or OldSignal[Remote])(unpack(selected.args))
 					end
 				end
 
