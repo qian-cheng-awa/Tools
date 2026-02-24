@@ -16,7 +16,7 @@ local realconfigs = {
 
 local configs = newproxy(true)
 local configsmetatable = getmetatable(configs)
-
+local getcallbackmember = getcallbackmember or getcallbackvalue
 configsmetatable.__index = function(self,index)
 	return realconfigs[index]
 end
@@ -1072,7 +1072,7 @@ function genScript(remote, args, client)
 			if not client then
 				gen = gen .. LazyFix.ConvertKnown("Instance", remote) .. `:InvokeServer({Args})`
 			else
-				gen ..= `getcallbackmember({LazyFix.ConvertKnown("Instance", remote)},"OnClientInvoke")({Args})`
+				gen ..= `{getcallbackmember and "getcallbackmember" or getcallbackvalue and "getcallbackvalue" or "Error: missing getcallback function"}({LazyFix.ConvertKnown("Instance", remote)},"OnClientInvoke")({Args})`
 			end
 		end
 	else
@@ -1087,7 +1087,7 @@ function genScript(remote, args, client)
 			if not client then
 				gen ..= LazyFix.ConvertKnown("Instance", remote) .. ":InvokeServer()"
 			else
-				gen ..= `getcallbackmember({LazyFix.ConvertKnown("Instance", remote)},"OnClientInvoke")`
+				gen ..= `{getcallbackmember and "getcallbackmember" or getcallbackvalue and "getcallbackvalue" or "Error: missing getcallback function"}({LazyFix.ConvertKnown("Instance", remote)},"OnClientInvoke")`
 			end
 		end
 	end
@@ -1958,6 +1958,41 @@ local function addsignal(obj)
 	end
 	
 	if obj:IsA("RemoteEvent") or obj:IsA("UnreliableRemoteEvent") then
+		if not getconnections(obj.OnClientEvent)[1] then
+			task.spawn(function()
+				local tic = tick()
+				repeat
+					task.wait()
+					if getconnections(obj.OnClientEvent)[1] then
+						for i,v in pairs(getconnections(obj.OnClientEvent)) do
+							if v.Function then
+								OldSignal[obj] = v.Function
+								HookedSingals[obj] = hookfunction(v.Function, function(...)
+									NewSingal(obj,"OnClientEvent",...)
+									return HookedSingals[obj](...)
+								end)
+							else
+								task.spawn(function()
+									local tic = tick()
+									repeat
+										if v.Function then
+											OldSignal[obj] = v.Function
+											HookedSingals[obj] = hookfunction(v.Function, function(...)
+												NewSingal(obj,"OnClientEvent",...)
+												return HookedSingals[obj](...)
+											end)
+											break
+										end
+									until tick()-tic > 60
+								end)
+							end
+						end
+						break
+					end
+				until tick()- tic > 60
+			end)
+			return
+		end
 		for i,v in pairs(getconnections(obj.OnClientEvent)) do
 			if v.Function then
 				OldSignal[obj] = v.Function
@@ -1965,14 +2000,47 @@ local function addsignal(obj)
 					NewSingal(obj,"OnClientEvent",...)
 					return HookedSingals[obj](...)
 				end)
+			else
+				task.spawn(function()
+					local tic = tick()
+					repeat
+						task.wait()
+						if v.Function then
+							OldSignal[obj] = v.Function
+							HookedSingals[obj] = hookfunction(v.Function, function(...)
+								NewSingal(obj,"OnClientEvent",...)
+								return HookedSingals[obj](...)
+							end)
+							break
+						end
+					until tick()-tic > 60
+				end)
 			end
 		end
 	elseif obj:IsA("RemoteFunction") and getcallbackmember then
-		OldSignal[obj] = getcallbackmember(obj,"OnClientInvoke")
-		HookedSingals[obj] = hookfunction(getcallbackmember(obj,"OnClientInvoke"), function(...)
-			NewSingal(obj,"OnClientInvoke",...)
-			return HookedSingals[obj](...)
-		end)
+		if getcallbackmember(obj,"OnClientInvoke") then
+			OldSignal[obj] = getcallbackmember(obj,"OnClientInvoke")
+			HookedSingals[obj] = hookfunction(getcallbackmember(obj,"OnClientInvoke"), function(...)
+				NewSingal(obj,"OnClientInvoke",...)
+				return HookedSingals[obj](...)
+			end)
+		else
+			task.spawn(function()
+				local tic = tick()
+				repeat
+					task.wait()
+					if getcallbackmember(obj,"OnClientInvoke") then
+						OldSignal[obj] = getcallbackmember(obj,"OnClientInvoke")
+						HookedSingals[obj] = hookfunction(getcallbackmember(obj,"OnClientInvoke"), function(...)
+							NewSingal(obj,"OnClientInvoke",...)
+							return HookedSingals[obj](...)
+						end)
+						break
+					end
+				until tick()-tic > 60
+			end)
+		end
+		
 	end
 end
 function toggleSpy()
