@@ -1975,6 +1975,7 @@ local function addsignal(obj)
 								task.spawn(function()
 									local tic = tick()
 									repeat
+										task.wait()
 										if v.Function then
 											OldSignal[obj] = v.Function
 											HookedSingals[obj] = hookfunction(v.Function, function(...)
