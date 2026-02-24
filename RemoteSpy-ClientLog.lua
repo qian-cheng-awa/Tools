@@ -1834,7 +1834,7 @@ local NewSingal = function(remote,signal,...)
 				local returndata
 
 				spawn(function()
-					returndata = firesignal(remote[signal],unpack(args))
+					returndata = getcallbackmember(remote,signal)(unpack(args))
 					data.returnvalue.data = returndata
 					if ThreadIsNotDead(thread) then
 						resume(thread)
