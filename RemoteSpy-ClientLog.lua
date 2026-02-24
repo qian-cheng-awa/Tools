@@ -978,12 +978,12 @@ function newRemote(type, data)
 
 	local RemoteTemplate = Create("Frame",{LayoutOrder = layoutOrderNum,Name = "RemoteTemplate",Parent = LogList,BackgroundColor3 = Color3.new(1, 1, 1),BackgroundTransparency = 1,Size = UDim2.new(0, 117, 0, 27)})
 	local ColorBar = Create("Frame",{Name = "ColorBar",Parent = RemoteTemplate,BackgroundColor3 = (
-		
-			type == "event" and Color3.fromRGB(255, 242, 0) or
+
+		type == "event" and Color3.fromRGB(255, 242, 0) or
 			type == "function" and	Color3.fromRGB(99, 86, 245) or
 			type == "clientevent" and Color3.fromRGB(230, 144, 87) or
 			type == "clientfunction" and Color3.fromRGB(121, 51, 112)
-		
+
 		)
 		,BorderSizePixel = 0,Position = UDim2.new(0, 0, 0, 1),Size = UDim2.new(0, 7, 0, 18),ZIndex = 2})
 	local Text = Create("TextLabel",{TextTruncate = Enum.TextTruncate.AtEnd,Name = "Text",Parent = RemoteTemplate,BackgroundColor3 = Color3.new(1, 1, 1),BackgroundTransparency = 1,Position = UDim2.new(0, 12, 0, 1),Size = UDim2.new(0, 105, 0, 18),ZIndex = 2,Font = Enum.Font.SourceSans,Text = remote.Name,TextColor3 = Color3.new(1, 1, 1),TextSize = 14,TextXAlignment = Enum.TextXAlignment.Left})
@@ -1060,8 +1060,8 @@ function genScript(remote, args, client)
 		if not remote:IsDescendantOf(game) and not getnilrequired then
 			gen = "function getNil(name,class) for _,v in next, getnilinstances()do if v.ClassName==class and v.Name==name then return v;end end end\n\n" .. gen
 		end
-		
-		
+
+
 		if remote:IsA("RemoteEvent") or remote:IsA("UnreliableRemoteEvent") then
 			if not client then
 				gen ..= LazyFix.ConvertKnown("Instance", remote) .. `:FireServer({Args})`
@@ -1082,7 +1082,7 @@ function genScript(remote, args, client)
 			else
 				gen ..= `firesignal({LazyFix.ConvertKnown("Instance", remote)}.OnClientEvent)`
 			end
-			
+
 		elseif remote:IsA("RemoteFunction") then
 			if not client then
 				gen ..= LazyFix.ConvertKnown("Instance", remote) .. ":InvokeServer()"
@@ -1770,24 +1770,24 @@ local newindex = function(method,originalfunction,...)
 
 				schedule(remoteHandler,data)
 
-                if configs.logreturnvalues and remote:IsA("RemoteFunction") then
-                    local thread = running()
-                    local returnargs = {...}
-                    local returndata
+				if configs.logreturnvalues and remote:IsA("RemoteFunction") then
+					local thread = running()
+					local returnargs = {...}
+					local returndata
 
-                    spawn(function()
-                        setnamecallmethod(method)
-                        returndata = originalnamecall(unpack(returnargs))
-                        data.returnvalue.data = returndata
-                        if ThreadIsNotDead(thread) then
-                            resume(thread)
-                        end
-                     end)
-                    yield()
-                    if not blockcheck then
-                        return returndata
-                    end
-                end
+					spawn(function()
+						setnamecallmethod(method)
+						returndata = originalnamecall(unpack(returnargs))
+						data.returnvalue.data = returndata
+						if ThreadIsNotDead(thread) then
+							resume(thread)
+						end
+					end)
+					yield()
+					if not blockcheck then
+						return returndata
+					end
+				end
 			end
 			if blockcheck then return end
 		end
@@ -1797,13 +1797,13 @@ end
 
 local HookedSingals = {}
 
-local NewSingal = function(remote,signal,...)
+local NewSingal = function(remote,signal,old,...)
 	local remote = cloneref(remote)
 	if IsA(remote,"RemoteEvent") or IsA(remote,"RemoteFunction") or IsA(remote,"UnreliableRemoteEvent") then
 		local id = ThreadGetDebugId(remote)
 		local blockcheck = tablecheck(blocklist,remote,id)
 		local args = {...}
-		
+
 		if not tablecheck(blacklist,remote,id) and not IsCyclicTable(args) then
 			local data = {
 				method = signal,
@@ -1834,7 +1834,7 @@ local NewSingal = function(remote,signal,...)
 				local returndata
 
 				spawn(function()
-					returndata = getcallbackmember(remote,signal)(unpack(returnargs))
+					returndata = old(unpack(returnargs))
 					data.returnvalue.data = returndata
 					if ThreadIsNotDead(thread) then
 						resume(thread)
@@ -1848,7 +1848,7 @@ local NewSingal = function(remote,signal,...)
 		end
 		if blockcheck then return end
 	end
-	return (HookedSingals[remote])(remote,...)
+	return clonefunction(old)(...)
 end
 
 local newnamecall = newcclosure(function(...)
@@ -1888,24 +1888,24 @@ local newnamecall = newcclosure(function(...)
 
 					schedule(remoteHandler,data)
 
-                    if configs.logreturnvalues and remote.IsA(remote,"RemoteFunction") then
-                        local thread = running()
-                        local returnargs = {...}
-                        local returndata
+					if configs.logreturnvalues and remote.IsA(remote,"RemoteFunction") then
+						local thread = running()
+						local returnargs = {...}
+						local returndata
 
-                        spawn(function()
-                            setnamecallmethod(method)
-                            returndata = originalnamecall(unpack(returnargs))
-                            data.returnvalue.data = returndata
-                            if ThreadIsNotDead(thread) then
-                                resume(thread)
-                            end
-                        end)
-                        yield()
-                        if not blockcheck then
-                            return returndata
-                        end
-                    end
+						spawn(function()
+							setnamecallmethod(method)
+							returndata = originalnamecall(unpack(returnargs))
+							data.returnvalue.data = returndata
+							if ThreadIsNotDead(thread) then
+								resume(thread)
+							end
+						end)
+						yield()
+						if not blockcheck then
+							return returndata
+						end
+					end
 				end
 				if blockcheck then return end
 			end
@@ -1957,7 +1957,7 @@ local function addsignal(obj)
 	if HookedSingals[obj] then
 		return
 	end
-	
+
 	if obj:IsA("RemoteEvent") or obj:IsA("UnreliableRemoteEvent") then
 		if not getconnections(obj.OnClientEvent)[1] then
 			task.spawn(function()
@@ -1968,8 +1968,8 @@ local function addsignal(obj)
 						for i,v in pairs(getconnections(obj.OnClientEvent)) do
 							if v.Function then
 								OldSignal[obj] = v.Function
-								HookedSingals[obj] = hookfunction(v.Function, function(...)
-									NewSingal(obj,"OnClientEvent",...)
+								local old;old = hookfunction(v.Function, function(...)
+									NewSingal(obj,"OnClientEvent",old,...)
 								end)
 							else
 								task.spawn(function()
@@ -1978,8 +1978,8 @@ local function addsignal(obj)
 										task.wait()
 										if v.Function then
 											OldSignal[obj] = v.Function
-											HookedSingals[obj] = hookfunction(v.Function, function(...)
-												NewSingal(obj,"OnClientEvent",...)
+											local old;old = hookfunction(v.Function, function(...)
+												NewSingal(obj,"OnClientEvent",old,...)
 											end)
 											break
 										end
@@ -1996,8 +1996,8 @@ local function addsignal(obj)
 		for i,v in pairs(getconnections(obj.OnClientEvent)) do
 			if v.Function then
 				OldSignal[obj] = v.Function
-				HookedSingals[obj] = hookfunction(v.Function, function(...)
-					NewSingal(obj,"OnClientEvent",...)
+				local old;old = hookfunction(v.Function, function(...)
+					NewSingal(obj,"OnClientEvent",old,...)
 				end)
 			else
 				task.spawn(function()
@@ -2006,8 +2006,8 @@ local function addsignal(obj)
 						task.wait()
 						if v.Function then
 							OldSignal[obj] = v.Function
-							HookedSingals[obj] = hookfunction(v.Function, function(...)
-								NewSingal(obj,"OnClientEvent",...)
+							local old;old = hookfunction(v.Function, function(...)
+								NewSingal(obj,"OnClientEvent",old,...)
 							end)
 							break
 						end
@@ -2018,8 +2018,8 @@ local function addsignal(obj)
 	elseif obj:IsA("RemoteFunction") and getcallbackmember then
 		if getcallbackmember(obj,"OnClientInvoke") then
 			OldSignal[obj] = getcallbackmember(obj,"OnClientInvoke")
-			HookedSingals[obj] = hookfunction(getcallbackmember(obj,"OnClientInvoke"), function(...)
-				NewSingal(obj,"OnClientInvoke",...)
+			local old;old = hookfunction(getcallbackmember(obj,"OnClientInvoke"), function(...)
+				NewSingal(obj,"OnClientInvoke",old,...)
 			end)
 		else
 			task.spawn(function()
@@ -2028,15 +2028,15 @@ local function addsignal(obj)
 					task.wait()
 					if getcallbackmember(obj,"OnClientInvoke") then
 						OldSignal[obj] = getcallbackmember(obj,"OnClientInvoke")
-						HookedSingals[obj] = hookfunction(getcallbackmember(obj,"OnClientInvoke"), function(...)
-							NewSingal(obj,"OnClientInvoke",...)
+						local old;old = hookfunction(getcallbackmember(obj,"OnClientInvoke"), function(...)
+							NewSingal(obj,"OnClientInvoke",old,...)
 						end)
 						break
 					end
 				until tick()-tic > 60
 			end)
 		end
-		
+
 	end
 end
 function toggleSpy()
@@ -2240,7 +2240,7 @@ newButton("Run Code",
 					if selected.metamethod ~= "_connect" then
 						returnvalue = Remote:InvokeServer(unpack(selected.args))
 					else
-						returnvalue = (HookedSingals[Remote] or OldSignal[Remote])(unpack(selected.args))
+						returnvalue = (clonefunction(OldSignal[Remote]))(unpack(selected.args))
 					end
 				end
 
@@ -2501,8 +2501,8 @@ newButton(
 	"Log returnvalues",
 	function() return ("[BETA] [%s] Log RemoteFunction's return values"):format(configs.logcheckcaller and "ENABLED" or "DISABLED") end,
 	function()
- 	   configs.logreturnvalues = not configs.logreturnvalues
- 	   TextLabel.Text = ("[BETA] [%s] Log RemoteFunction's return values"):format(configs.logreturnvalues and "ENABLED" or "DISABLED")
+		configs.logreturnvalues = not configs.logreturnvalues
+		TextLabel.Text = ("[BETA] [%s] Log RemoteFunction's return values"):format(configs.logreturnvalues and "ENABLED" or "DISABLED")
 	end
 )
 
