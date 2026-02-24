@@ -2245,7 +2245,7 @@ newButton("Run Code",
 					if selected.metamethod ~= "_connect" then
 						returnvalue = Remote:InvokeServer(unpack(selected.args))
 					else
-						returnvalue = getcallbackmember(Remote,"OnClientInvoke")(unpack(selected.args))
+						returnvalue = (HookedSingals[Remote] or getcallbackmember(Remote,"OnClientInvoke"))(unpack(selected.args))
 					end
 				end
 
