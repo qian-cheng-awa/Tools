@@ -1072,7 +1072,7 @@ function genScript(remote, args, client)
 			if not client then
 				gen = gen .. LazyFix.ConvertKnown("Instance", remote) .. `:InvokeServer({Args})`
 			else
-				gen ..= `{getcallbackmember and "getcallbackmember" or getcallbackvalue and "getcallbackvalue" or "Error: missing getcallback function"}({LazyFix.ConvertKnown("Instance", remote)},"OnClientInvoke")({Args})`
+				gen ..= `{getcallbackvalue and "getcallbackvalue" or "getcallbackmember"}({LazyFix.ConvertKnown("Instance", remote)},"OnClientInvoke")({Args})`
 			end
 		end
 	else
@@ -1087,7 +1087,7 @@ function genScript(remote, args, client)
 			if not client then
 				gen ..= LazyFix.ConvertKnown("Instance", remote) .. ":InvokeServer()"
 			else
-				gen ..= `{getcallbackmember and "getcallbackmember" or getcallbackvalue and "getcallbackvalue" or "Error: missing getcallback function"}({LazyFix.ConvertKnown("Instance", remote)},"OnClientInvoke")`
+				gen ..= `{getcallbackvalue and "getcallbackvalue" or "getcallbackmember"}({LazyFix.ConvertKnown("Instance", remote)},"OnClientInvoke")`
 			end
 		end
 	end
