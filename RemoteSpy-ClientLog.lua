@@ -1858,7 +1858,7 @@ local newindexcall = newcclosure(function(self,index,func)
 		addsignal(self)
 	end
 	
-	return originalnewindex()
+	return originalnewindex(self,index,func)
 end)
 
 local newnamecall = newcclosure(function(...)
@@ -2170,7 +2170,7 @@ if not getgenv().SimpleSpyExecuted then
 		getgenv().SimpleSpyExecuted = true
 	else
 		shutdown()
-		ErrorPrompt("An error has occured:\n"..rawtostring(err))
+		error("An error has occured:\n"..rawtostring(err))
 		return
 	end
 else
