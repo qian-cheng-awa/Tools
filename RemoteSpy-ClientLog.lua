@@ -1853,9 +1853,10 @@ local NewSingal = function(remote,signal,old,...)
 end
 
 local newindexcall = newcclosure(function(self,index,func)
-	if index and typeof(index) == "string" and index:lower() == "onclientinvoke" and IsA(self) == "RemoteFunction" then
-		print("New Index : "..tostring(self:GetFullName()))
-		addsignal(self)
+	if index and typeof(index) == "string" and index:lower() == "onclientinvoke" then
+		task.delay(0,function()
+			addsignal(self)
+		end)
 	end
 	
 	return originalnewindex(self,index,func)
