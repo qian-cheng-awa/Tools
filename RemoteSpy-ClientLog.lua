@@ -2050,7 +2050,7 @@ function toggleSpy()
 		else
 			if hookmetamethod then
 				oldnamecall = hookmetamethod(game, "__namecall", clonefunction(newnamecall))
-				oldindexcall = hookmetamethod(game, "__index", clonefunction(newindexcall))
+				oldindexcall = hookmetamethod(game, "__newindex", clonefunction(newindexcall))
 			else
 				oldnamecall = hookfunction(getrawmetatable(game).__namecall,clonefunction(newnamecall))
 				oldindexcall = hookfunction(getrawmetatable(game).__newindex,clonefunction(newindexcall))
