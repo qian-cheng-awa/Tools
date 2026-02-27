@@ -1796,11 +1796,11 @@ local newindex = function(method,originalfunction,...)
 	return originalfunction(...)
 end
 
-local HookedSingals = {}
-
 local NewSingal = function(remote,signal,old,...)
 	local remote = cloneref(remote)
 	if IsA(remote,"RemoteEvent") or IsA(remote,"RemoteFunction") or IsA(remote,"UnreliableRemoteEvent") then
+		if not configs.logcheckcaller and checkcaller() then return old(...) end
+		
 		local id = ThreadGetDebugId(remote)
 		local blockcheck = tablecheck(blocklist,remote,id)
 		local args = {...}
@@ -1849,7 +1849,7 @@ local NewSingal = function(remote,signal,old,...)
 		end
 		if blockcheck then return end
 	end
-	return clonefunction(old)(...)
+	return old(...)
 end
 
 local newindexcall = newcclosure(function(self,index,func)
@@ -1969,7 +1969,7 @@ end
 
 --- Toggles on and off the remote spy
 function addsignal(obj)
-	if HookedSingals[obj] then
+	if OldSignal[obj] then
 		return
 	end
 
@@ -1983,8 +1983,8 @@ function addsignal(obj)
 						for i,v in pairs(getconnections(obj.OnClientEvent)) do
 							if v.Function then
 								OldSignal[obj] = v.Function
-								HookedSingals[obj] = hookfunction(v.Function, function(...)
-									NewSingal(obj,"OnClientEvent",HookedSingals[obj],...)
+								local old;old = hookfunction(v.Function, function(...)
+									return NewSingal(obj,"OnClientEvent",old,...)
 								end)
 							else
 								task.spawn(function()
@@ -1993,8 +1993,8 @@ function addsignal(obj)
 										task.wait()
 										if v.Function then
 											OldSignal[obj] = v.Function
-											HookedSingals[obj] = hookfunction(v.Function, function(...)
-												NewSingal(obj,"OnClientEvent",HookedSingals[obj],...)
+											local old;old = hookfunction(v.Function, function(...)
+												return NewSingal(obj,"OnClientEvent",old,...)
 											end)
 											break
 										end
@@ -2011,8 +2011,8 @@ function addsignal(obj)
 		for i,v in pairs(getconnections(obj.OnClientEvent)) do
 			if v.Function then
 				OldSignal[obj] = v.Function
-				HookedSingals[obj] = hookfunction(v.Function, function(...)
-					NewSingal(obj,"OnClientEvent",HookedSingals[obj],...)
+				local old;old = hookfunction(v.Function, function(...)
+					return NewSingal(obj,"OnClientEvent",old,...)
 				end)
 			else
 				task.spawn(function()
@@ -2021,8 +2021,8 @@ function addsignal(obj)
 						task.wait()
 						if v.Function then
 							OldSignal[obj] = v.Function
-							HookedSingals[obj] = hookfunction(v.Function, function(...)
-								NewSingal(obj,"OnClientEvent",HookedSingals[obj],...)
+							local old;old = hookfunction(v.Function, function(...)
+								return NewSingal(obj,"OnClientEvent",old,...)
 							end)
 							break
 						end
@@ -2033,8 +2033,8 @@ function addsignal(obj)
 	elseif obj:IsA("RemoteFunction") and getcallbackmember then
 		if getcallbackmember(obj,"OnClientInvoke") then
 			OldSignal[obj] = getcallbackmember(obj,"OnClientInvoke")
-			HookedSingals[obj] = hookfunction(getcallbackmember(obj,"OnClientInvoke"), function(...)
-				NewSingal(obj,"OnClientInvoke",HookedSingals[obj],...)
+			local old;old = hookfunction(getcallbackmember(obj,"OnClientInvoke"), function(...)
+				return NewSingal(obj,"OnClientInvoke",old,...)
 			end)
 		end
 	end
@@ -2246,7 +2246,7 @@ newButton("Run Code",
 					if selected.metamethod ~= "_connect" then
 						returnvalue = Remote:InvokeServer(unpack(selected.args))
 					else
-						returnvalue = clonefunction((OldSignal[Remote] or HookedSingals[Remote] or getcallbackmember(Remote,"OnClientInvoke")))(unpack(selected.args))
+						returnvalue = clonefunction(getcallbackmember(Remote,"OnClientInvoke"))(unpack(selected.args))
 					end
 				end
 
