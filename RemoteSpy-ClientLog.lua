@@ -305,6 +305,7 @@ local DecompiledScripts = {}
 local generation = {}
 local running_threads = {}
 local originalnamecall
+local originalnewindex
 
 local remoteEvent = Instance.new("RemoteEvent",Storage)
 local unreliableRemoteEvent = Instance.new("UnreliableRemoteEvent")
@@ -1851,6 +1852,15 @@ local NewSingal = function(remote,signal,old,...)
 	return clonefunction(old)(...)
 end
 
+local newindexcall = newcclosure(function(self,index,func)
+	if index and typeof(index) == "string" and index:lower() == "onclientinvoke" and IsA(self) == "RemoteFunction" then
+		print("New Index : "..tostring(self:GetFullName()))
+		addsignal(self)
+	end
+	
+	return originalnewindex()
+end)
+
 local newnamecall = newcclosure(function(...)
 	local method = getnamecallmethod()
 
@@ -1931,17 +1941,21 @@ local OldSignal = {}
 local function disablehooks()
 	if synv3 then
 		unhook(getrawmetatable(game).__namecall,originalnamecall)
+		unhook(getrawmetatable(game).__newindex,originalnewindex)
 		unhook(Instance.new("RemoteEvent").FireServer, originalEvent)
 		unhook(Instance.new("RemoteFunction").InvokeServer, originalFunction)
 		unhook(Instance.new("UnreliableRemoteEvent").FireServer, originalUnreliableEvent)
 		restorefunction(originalnamecall)
+		restorefunction(originalnewindex)
 		restorefunction(originalEvent)
 		restorefunction(originalFunction)
 	else
 		if hookmetamethod then
 			hookmetamethod(game,"__namecall",originalnamecall)
+			hookmetamethod(game,"__newindex",originalnewindex)
 		else
 			hookfunction(getrawmetatable(game).__namecall,originalnamecall)
+			hookfunction(getrawmetatable(game).__newindex,originalnewindex)
 		end
 		hookfunction(Instance.new("RemoteEvent").FireServer, originalEvent)
 		hookfunction(Instance.new("RemoteFunction").InvokeServer, originalFunction)
@@ -1953,7 +1967,7 @@ local function disablehooks()
 end
 
 --- Toggles on and off the remote spy
-local function addsignal(obj)
+function addsignal(obj)
 	if HookedSingals[obj] then
 		return
 	end
@@ -2021,27 +2035,13 @@ local function addsignal(obj)
 			HookedSingals[obj] = hookfunction(getcallbackmember(obj,"OnClientInvoke"), function(...)
 				NewSingal(obj,"OnClientInvoke",HookedSingals[obj],...)
 			end)
-		else
-			task.spawn(function()
-				local tic = tick()
-				repeat
-					task.wait()
-					if getcallbackmember(obj,"OnClientInvoke") then
-						OldSignal[obj] = getcallbackmember(obj,"OnClientInvoke")
-						HookedSingals[obj] = hookfunction(getcallbackmember(obj,"OnClientInvoke"), function(...)
-							NewSingal(obj,"OnClientInvoke",HookedSingals[obj],...)
-						end)
-						break
-					end
-				until tick()-tic > 60
-			end)
 		end
-
 	end
 end
 function toggleSpy()
 	if not toggle then
 		local oldnamecall
+		local oldindexcall
 		if synv3 then
 			oldnamecall = hook(getrawmetatable(game).__namecall,clonefunction(newnamecall))
 			originalEvent = hook(Instance.new("RemoteEvent").FireServer, clonefunction(newFireServer))
@@ -2050,8 +2050,10 @@ function toggleSpy()
 		else
 			if hookmetamethod then
 				oldnamecall = hookmetamethod(game, "__namecall", clonefunction(newnamecall))
+				oldindexcall = hookmetamethod(game, "__index", clonefunction(newindexcall))
 			else
 				oldnamecall = hookfunction(getrawmetatable(game).__namecall,clonefunction(newnamecall))
+				oldindexcall = hookfunction(getrawmetatable(game).__newindex,clonefunction(newindexcall))
 			end
 			originalEvent = hookfunction(Instance.new("RemoteEvent").FireServer, clonefunction(newFireServer))
 			originalFunction = hookfunction(Instance.new("RemoteFunction").InvokeServer, clonefunction(newInvokeServer))
@@ -2059,6 +2061,9 @@ function toggleSpy()
 		end
 		originalnamecall = originalnamecall or function(...)
 			return oldnamecall(...)
+		end
+		originalnewindex = originalnewindex or function(...)
+			return oldindexcall(...)
 		end
 	else
 		disablehooks()
