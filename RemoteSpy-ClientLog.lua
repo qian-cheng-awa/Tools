@@ -1800,7 +1800,7 @@ local NewSingal = function(remote,signal,old,...)
 	local remote = cloneref(remote)
 	if IsA(remote,"RemoteEvent") or IsA(remote,"RemoteFunction") or IsA(remote,"UnreliableRemoteEvent") then
 		if not configs.logcheckcaller and checkcaller() then return old(...) end
-		
+
 		local id = ThreadGetDebugId(remote)
 		local blockcheck = tablecheck(blocklist,remote,id)
 		local args = {...}
@@ -1852,14 +1852,18 @@ local NewSingal = function(remote,signal,old,...)
 	return old(...)
 end
 
-local newindexcall = newcclosure(function(self,index,func)
-	if IsA(self,"RemoteFunction") and index:lower() == "onclientinvoke" then
-		task.delay(0,function()
-			addsignal(self)
-		end)
+local newindexcall = newcclosure(function(...)
+	local self,key,value = ...
+
+	if typeof(self) == "Instance" and self:IsA("RemoteFunction") then
+		if type(key) == "string" and key:lower() == "onclientinvoke" then
+			if type(value) == "function" then
+				addsignal(self, value)
+			end
+		end
 	end
-	
-	return originalnewindex(self,index,func)
+
+	return originalnewindex(...)
 end)
 
 local newnamecall = newcclosure(function(...)
@@ -1968,7 +1972,7 @@ local function disablehooks()
 end
 
 --- Toggles on and off the remote spy
-function addsignal(obj)
+function addsignal(obj,func)
 	if OldSignal[obj] then
 		return
 	end
@@ -2036,6 +2040,11 @@ function addsignal(obj)
 			local old;old = hookfunction(getcallbackmember(obj,"OnClientInvoke"), function(...)
 				return NewSingal(obj,"OnClientInvoke",old,...)
 			end)
+		elseif func then
+			OldSignal[obj] = func
+			local old;old = hookfunction(func, function(...)
+				return NewSingal(obj,"OnClientInvoke",old,...)
+			end)
 		end
 	end
 end
@@ -2070,12 +2079,10 @@ function toggleSpy()
 		disablehooks()
 	end
 end
+
 for _,v in ipairs(game:GetDescendants()) do
 	addsignal(v)
 end
-local adds;adds = game.DescendantAdded:Connect(function(v)
-	addsignal(v)
-end)
 --- Toggles between the two remotespy methods (hookfunction currently = disabled)
 function toggleSpyMethod()
 	toggleSpy()
