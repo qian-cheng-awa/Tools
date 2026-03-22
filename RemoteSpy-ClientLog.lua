@@ -1872,12 +1872,10 @@ end)
 local indexcall = newcclosure(function(...)
 	local self,key = ...
 
-	if typeof(self) == "Instance" and (self:IsA("RemoteEvent") or self:IsA("UnreliableRemoteEvent")) then
-		if type(key) == "string" and key:lower() == "onclientevent" then
-			if not Indexed[self] then
-				Indexed[self] = true
-				addsignal(self,true)
-			end
+	if type(key) == "string" and key:lower() == "onclientevent" and typeof(self) == "Instance" and (self:IsA("RemoteEvent") or self:IsA("UnreliableRemoteEvent")) then
+		if not Indexed[self] then
+			Indexed[self] = true
+			addsignal(self,true)
 		end
 	end
 
@@ -2069,7 +2067,7 @@ function toggleSpy()
 		originalindex = originalindex or function(...)
 			return oldindex(...)
 		end
-		
+
 		if synv3 then
 			originalEvent = hook(Instance.new("RemoteEvent").FireServer, clonefunction(newFireServer))
 			originalFunction = hook(Instance.new("RemoteFunction").InvokeServer, clonefunction(newInvokeServer))
