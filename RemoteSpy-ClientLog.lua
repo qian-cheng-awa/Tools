@@ -1797,8 +1797,8 @@ local newindex = function(method,originalfunction,...)
 	return originalfunction(...)
 end
 
-local NewSingal = function(remote,signal,old,...)
-	local remote = cloneref(remote)
+local NewSingal = function(oremote,signal,old,...)
+	local remote = cloneref(oremote)
 	if IsA(remote,"RemoteEvent") or IsA(remote,"RemoteFunction") or IsA(remote,"UnreliableRemoteEvent") then
 		if not configs.logcheckcaller and checkcaller() then return old(...) end
 
@@ -1809,7 +1809,7 @@ local NewSingal = function(remote,signal,old,...)
 		if not tablecheck(blacklist,remote,id) and not IsCyclicTable(args) then
 			local data = {
 				method = signal,
-				remote = remote,
+				remote = oremote,
 				args = deepclone(args),
 				infofunc = infofunc,
 				callingscript = callingscript,
@@ -1854,6 +1854,7 @@ local NewSingal = function(remote,signal,old,...)
 end
 
 local Indexed = {}
+local OldSignal = {}
 
 local newindexcall = newcclosure(function(...)
 	local self,key,value = ...
@@ -1870,12 +1871,12 @@ local newindexcall = newcclosure(function(...)
 end)
 
 local indexcall = newcclosure(function(...)
-	local self,key = ...
-
-	if type(key) == "string" and key:lower() == "onclientevent" and typeof(self) == "Instance" and (self:IsA("RemoteEvent") or self:IsA("UnreliableRemoteEvent")) then
-		if not Indexed[self] then
-			Indexed[self] = true
-			addsignal(self,true)
+	local remote,key = ...
+	
+	if type(key) == "string" and key:lower() == "onclientevent" and typeof(remote) == "Instance" and (IsA(remote,"RemoteEvent") or IsA(remote,"UnreliableRemoteEvent")) then
+		if not Indexed[remote] and not OldSignal[remote] then
+			Indexed[remote] = true
+			addsignal(remote,true)
 		end
 	end
 
@@ -1957,7 +1958,7 @@ local newInvokeServer = newcclosure(function(...)
 	return newindex("InvokeServer",originalFunction,...)
 end)
 
-local OldSignal = {}
+
 
 local function disablehooks()
 	if synv3 then
