@@ -1813,7 +1813,7 @@ local NewSingal = function(oremote,signal,old,...)
 				args = deepclone(args),
 				infofunc = infofunc,
 				callingscript = callingscript,
-				metamethod = "_connect",
+				metamethod = "__connect",
 				blockcheck = blockcheck,
 				id = id,
 				returnvalue = {}
@@ -2247,13 +2247,13 @@ newButton("Run Code",
 			xpcall(function()
 				local returnvalue
 				if Remote:IsA("RemoteEvent") or Remote:IsA("UnreliableRemoteEvent") then
-					if selected.metamethod ~= "_connect" then
+					if selected.metamethod ~= "__connect" then
 						returnvalue = Remote:FireServer(unpack(selected.args))
 					else
 						returnvalue = firesignal(Remote.OnClientEvent, unpack(selected.args))
 					end
 				elseif Remote:IsA("RemoteFunction") then
-					if selected.metamethod ~= "_connect" then
+					if selected.metamethod ~= "__connect" then
 						returnvalue = Remote:InvokeServer(unpack(selected.args))
 					else
 						returnvalue = clonefunction(getcallbackmember(Remote,"OnClientInvoke"))(unpack(selected.args))
