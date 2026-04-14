@@ -4202,7 +4202,8 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 					local EncodingService = game:GetService("EncodingService")
 					local EncodingService_base64encode = function(raw:string)
 						if typeof(raw) == "Instance" then
-							error(raw:GetFullName())
+							warn(raw:GetFullName())
+							return
 						end
 						return buffer.tostring(EncodingService:Base64Encode(buffer.fromstring(raw)))
 					end
