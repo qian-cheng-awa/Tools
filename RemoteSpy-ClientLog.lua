@@ -1122,7 +1122,7 @@ function genScript(remote, args, type)
 			elseif type == "httprequest" then
 				gen = "local request = syn and syn.request or request or http_request\n\n" .. gen
 
-				gen = `request({Args})`
+				gen = gen .. `request({Args})`
 			end
 		else
 			if not remote:IsDescendantOf(game) and not getnilrequired then
