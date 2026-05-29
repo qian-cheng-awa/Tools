@@ -1892,18 +1892,11 @@ local NewHttp = function(old,...)
 	schedule(remoteHandler,data)
 
 	if configs.logreturnvalues then
-		local thread = running()
 		local returnargs = {...}
 		local returndata
 
-		spawn(function()
-			returndata = old(unpack(returnargs))
-			data.returnvalue.data = returndata
-			if ThreadIsNotDead(thread) then
-				resume(thread)
-			end
-		end)
-		yield()
+		returndata = old(unpack(returnargs))
+		data.returnvalue.data = returndata
 		return returndata
 	end
 
@@ -2084,18 +2077,10 @@ local newnamecall = newcclosure(function(...)
 				schedule(remoteHandler,data)
 
 				if configs.logreturnvalues then
-					local thread = running()
 					local returnargs = {...}
 					local returndata
-
-					spawn(function()
-						returndata = originalHttpGet(unpack(returnargs))
-						data.returnvalue.data = returndata
-						if ThreadIsNotDead(thread) then
-							resume(thread)
-						end
-					end)
-					yield()
+					returndata = originalHttpGet(unpack(returnargs))
+					data.returnvalue.data = returndata
 					return returndata
 				end
 			end
@@ -2143,10 +2128,8 @@ local newHttpGet = newcclosure(function(...)
 		local returnargs = {...}
 		local returndata
 
-		spawn(function()
-			returndata = originalHttpGet(unpack(returnargs))
-			data.returnvalue.data = returndata
-		end)
+		returndata = originalHttpGet(unpack(returnargs))
+		data.returnvalue.data = returndata
 		return returndata
 	end
 	
@@ -2261,7 +2244,7 @@ function toggleSpy()
 				oldindex = hookmetamethod(game, "__index", clonefunction(indexcall))
 			else
 				oldnamecall = hookfunction(getrawmetatable(game).__namecall,clonefunction(newnamecall))
-				oldindexcall = hookfunction(getrawmetatable(game).__newindex,clonefunction(newindexcall))
+				oldindexcall = hookfunctionhookfunction(getrawmetatable(game).__newindex,clonefunction(newindexcall))
 				oldindex = hookfunction(getrawmetatable(game).__index,clonefunction(indexcall))
 			end
 		end
