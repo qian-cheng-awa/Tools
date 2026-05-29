@@ -10,8 +10,10 @@ local realconfigs = {
 	autoblock = false,
 	funcEnabled = true,
 	advancedinfo = false,
-	logreturnvalues = false,
-	supersecretdevtoggle = false
+	logreturnvalues = true,
+	supersecretdevtoggle = false,
+	httplog = true,
+	clientlog = true
 }
 
 local configs = newproxy(true)
@@ -20,10 +22,16 @@ local getcallbackmember = getcallbackmember or getcallbackvalue
 configsmetatable.__index = function(self,index)
 	return realconfigs[index]
 end
-
 local oth = syn and syn.oth
 local unhook = oth and oth.unhook
 local hook = oth and oth.hook
+
+local RequestHook = {}
+local RequestFunctions = {
+	syn and syn.request,
+	request,
+	http_request,
+}
 
 local lower = string.lower
 local byte = string.byte
@@ -315,7 +323,9 @@ local NamecallHandler = Instance.new("BindableEvent",Storage)
 local IndexHandler = Instance.new("BindableEvent",Storage)
 local GetDebugIdHandler = Instance.new("BindableFunction",Storage) --Thanks engo for the idea of using BindableFunctions
 
+
 local originalEvent = remoteEvent.FireServer
+local originalHttpGet = game.HttpGet
 local originalUnreliableEvent = unreliableRemoteEvent.FireServer
 local originalFunction = remoteFunction.InvokeServer
 local GetDebugIDInvoke = GetDebugIdHandler.Invoke
@@ -979,23 +989,68 @@ function newRemote(type, data)
 	local callingscript = data.callingscript
 
 	local RemoteTemplate = Create("Frame",{LayoutOrder = layoutOrderNum,Name = "RemoteTemplate",Parent = LogList,BackgroundColor3 = Color3.new(1, 1, 1),BackgroundTransparency = 1,Size = UDim2.new(0, 117, 0, 27)})
-	local ColorBar = Create("Frame",{Name = "ColorBar",Parent = RemoteTemplate,BackgroundColor3 = (
-
-		type == "event" and Color3.fromRGB(255, 242, 0) or
-			type == "function" and	Color3.fromRGB(99, 86, 245) or
-			type == "clientevent" and Color3.fromRGB(230, 144, 87) or
-			type == "clientfunction" and Color3.fromRGB(121, 51, 112)
-
-		)
-		,BorderSizePixel = 0,Position = UDim2.new(0, 0, 0, 1),Size = UDim2.new(0, 7, 0, 18),ZIndex = 2})
-	local Text = Create("TextLabel",{TextTruncate = Enum.TextTruncate.AtEnd,Name = "Text",Parent = RemoteTemplate,BackgroundColor3 = Color3.new(1, 1, 1),BackgroundTransparency = 1,Position = UDim2.new(0, 12, 0, 1),Size = UDim2.new(0, 105, 0, 18),ZIndex = 2,Font = Enum.Font.SourceSans,Text = remote.Name,TextColor3 = Color3.new(1, 1, 1),TextSize = 14,TextXAlignment = Enum.TextXAlignment.Left})
-	local Button = Create("TextButton",{Name = "Button",Parent = RemoteTemplate,BackgroundColor3 = Color3.new(0, 0, 0),BackgroundTransparency = 0.75,BorderColor3 = Color3.new(1, 1, 1),Position = UDim2.new(0, 0, 0, 1),Size = UDim2.new(0, 117, 0, 18),AutoButtonColor = false,Font = Enum.Font.SourceSans,Text = "",TextColor3 = Color3.new(0, 0, 0),TextSize = 14})
+	local ColorBar = Create(
+		"Frame",
+		{
+			Name = "ColorBar",
+			Parent = RemoteTemplate,
+			BackgroundColor3 = (
+				type == "event" and Color3.fromRGB(255, 242, 0) or
+				type == "function" and	Color3.fromRGB(99, 86, 245) or
+				type == "clientevent" and Color3.fromRGB(230, 144, 87) or
+				type == "clientfunction" and Color3.fromRGB(121, 51, 112) or
+				type == "httprequest" and Color3.fromRGB(47, 255, 0) or 
+				type == "httpget" and Color3.fromRGB(0, 229, 255)
+			),
+			BorderSizePixel = 0,
+			Position = UDim2.new(0, 0, 0, 1),
+			Size = UDim2.new(0, 7, 0, 18),
+			ZIndex = 2
+		}
+	)
+	
+	local Text = Create(
+		"TextLabel",
+		{
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			Name = "Text",
+			Parent = RemoteTemplate,
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			BackgroundTransparency = 1,
+			Position = UDim2.new(0, 12, 0, 1),
+			Size = UDim2.new(0, 105, 0, 18),
+			ZIndex = 2,
+			Font = Enum.Font.SourceSans,
+			Text = remote and remote.name or data.url or "Unknow",
+			TextColor3 = Color3.new(1, 1, 1),
+			TextSize = 14,
+			TextXAlignment = Enum.TextXAlignment.Left
+		}
+	)
+	
+	local Button = Create(
+		"TextButton",
+		{
+			Name = "Button",
+			Parent = RemoteTemplate,
+			BackgroundColor3 = Color3.new(0, 0, 0),
+			BackgroundTransparency = 0.75,
+			BorderColor3 = Color3.new(1, 1, 1),
+			Position = UDim2.new(0, 0, 0, 1),
+			Size = UDim2.new(0, 117, 0, 18),
+			AutoButtonColor = false,
+			Font = Enum.Font.SourceSans,
+			Text = "",
+			TextColor3 = Color3.new(0, 0, 0),
+			TextSize = 14
+		}
+	)
 
 	local log = {
-		Name = remote.name,
+		Name = remote and remote.name or data.url or "Unknow",
 		Function = data.infofunc or "--Function Info is disabled",
 		Remote = remote,
-		DebugId = data.id,
+		DebugId = data.id or math.random(),
 		metamethod = data.metamethod,
 		args = data.args,
 		Log = RemoteTemplate,
@@ -1010,7 +1065,7 @@ function newRemote(type, data)
 	local connect = Button.MouseButton1Click:Connect(function()
 		logthread(running())
 		eventSelect(RemoteTemplate)
-		log.GenScript = genScript(log.Remote, log.args, type == "clientfunction" or type == "clientevent")
+		log.GenScript = genScript(log.Remote, log.args, type)
 		if blocked then
 			log.GenScript = "-- THIS REMOTE WAS PREVENTED FROM FIRING TO THE SERVER BY SIMPLESPY\n\n" .. log.GenScript
 		end
@@ -1025,7 +1080,9 @@ function newRemote(type, data)
 end
 
 --- Generates a script from the provided arguments (first has to be remote path)
-function genScript(remote, args, client)
+function genScript(remote, args, type)
+	local client = type == "clientfunction" or type == "clientevent"
+	local http = type == "httprequest" or type == "httpget"
 	prevTables = {}
 	local gen = ""
 	local Args = ""
@@ -1059,22 +1116,32 @@ function genScript(remote, args, client)
 				Args ..= "}\n-- Legacy tableToString failure! Unable to decompile."
 			end)
 		end)
-		if not remote:IsDescendantOf(game) and not getnilrequired then
-			gen = "function getNil(name,class) for _,v in next, getnilinstances()do if v.ClassName==class and v.Name==name then return v;end end end\n\n" .. gen
-		end
+		if not remote and http then
+			if type == "httpget" then
+				gen = `game:HttpGet({Args})`
+			elseif type == "httprequest" then
+				gen = "local request = syn and syn.request or request or http_request\n\n" .. gen
 
-
-		if remote:IsA("RemoteEvent") or remote:IsA("UnreliableRemoteEvent") then
-			if not client then
-				gen ..= LazyFix.ConvertKnown("Instance", remote) .. `:FireServer({Args})`
-			else
-				gen ..= `firesignal({LazyFix.ConvertKnown("Instance", remote)}.OnClientEvent, {Args})`
+				gen = `request({Args})`
 			end
-		elseif remote:IsA("RemoteFunction") then
-			if not client then
-				gen = gen .. LazyFix.ConvertKnown("Instance", remote) .. `:InvokeServer({Args})`
-			else
-				gen ..= `{getcallbackvalue and "getcallbackvalue" or "getcallbackmember"}({LazyFix.ConvertKnown("Instance", remote)},"OnClientInvoke")({Args})`
+		else
+			if not remote:IsDescendantOf(game) and not getnilrequired then
+				gen = "function getNil(name,class) for _,v in next, getnilinstances()do if v.ClassName==class and v.Name==name then return v;end end end\n\n" .. gen
+			end
+
+
+			if remote:IsA("RemoteEvent") or remote:IsA("UnreliableRemoteEvent") then
+				if not client then
+					gen ..= LazyFix.ConvertKnown("Instance", remote) .. `:FireServer({Args})`
+				else
+					gen ..= `firesignal({LazyFix.ConvertKnown("Instance", remote)}.OnClientEvent, {Args}) \n--getconnections({LazyFix.ConvertKnown("Instance", remote)}.OnClientEvent)`
+				end
+			elseif remote:IsA("RemoteFunction") then
+				if not client then
+					gen = gen .. LazyFix.ConvertKnown("Instance", remote) .. `:InvokeServer({Args})`
+				else
+					gen ..= `{getcallbackvalue and "getcallbackvalue" or "getcallbackmember"}({LazyFix.ConvertKnown("Instance", remote)},"OnClientInvoke")({Args})`
+				end
 			end
 		end
 	else
@@ -1082,7 +1149,7 @@ function genScript(remote, args, client)
 			if not client then
 				gen ..= LazyFix.ConvertKnown("Instance", remote) .. ":FireServer()"
 			else
-				gen ..= `firesignal({LazyFix.ConvertKnown("Instance", remote)}.OnClientEvent)`
+				gen ..= `firesignal({LazyFix.ConvertKnown("Instance", remote)}.OnClientEvent) \n--getconnections({LazyFix.ConvertKnown("Instance", remote)}.OnClientEvent)`
 			end
 
 		elseif remote:IsA("RemoteFunction") then
@@ -1724,8 +1791,12 @@ function remoteHandler(data)
 		end
 		history[id].lastCall = tick()
 	end
-
-	if (data.remote:IsA("RemoteEvent") or data.remote:IsA("UnreliableRemoteEvent")) then
+	
+	if data.metamethod == "__httprequest" then
+		newRemote("httprequest",data)
+	elseif data.metamethod == "__httpget" then
+		newRemote("httpget",data)
+	elseif (data.remote:IsA("RemoteEvent") or data.remote:IsA("UnreliableRemoteEvent")) then
 		if lower(data.method) == "fireserver" then
 			newRemote("event", data)
 		elseif lower(data.method) == "onclientevent" then
@@ -1797,10 +1868,52 @@ local newindex = function(method,originalfunction,...)
 	return originalfunction(...)
 end
 
+local NewHttp = function(old,...)
+	local args = {...}
+
+	local data = {
+		method = "request",
+		args = deepclone(args),
+		infofunc = infofunc,
+		callingscript = identifyexecutor and identifyexecutor() or "Unknow exploit",
+		metamethod = "__httprequest",
+		returnvalue = {},
+		url = args[1].Url,
+	}
+	args = nil
+
+	if configs.funcEnabled then
+		data.infofunc = info(2,"f")
+		local calling = getcallingscript()
+		data.callingscript = calling and cloneref(calling) or nil
+	end
+
+	schedule(remoteHandler,data)
+
+	if configs.logreturnvalues then
+		local thread = running()
+		local returnargs = {...}
+		local returndata
+
+		spawn(function()
+			returndata = old(unpack(returnargs))
+			data.returnvalue.data = returndata
+			if ThreadIsNotDead(thread) then
+				resume(thread)
+			end
+		end)
+		yield()
+		return returndata
+	end
+
+	return old(...)
+end
+
 local NewSingal = function(oremote,signal,old,...)
 	local remote = cloneref(oremote)
 	if IsA(remote,"RemoteEvent") or IsA(remote,"RemoteFunction") or IsA(remote,"UnreliableRemoteEvent") then
 		if not configs.logcheckcaller and checkcaller() then return old(...) end
+		if not configs.clientlog then return old(...) end
 
 		local id = ThreadGetDebugId(remote)
 		local blockcheck = tablecheck(blocklist,remote,id)
@@ -1872,7 +1985,7 @@ end)
 
 local indexcall = newcclosure(function(...)
 	local remote,key = ...
-	
+
 	if type(key) == "string" and key:lower() == "onclientevent" and typeof(remote) == "Instance" and (IsA(remote,"RemoteEvent") or IsA(remote,"UnreliableRemoteEvent")) then
 		if not Indexed[remote] and not OldSignal[remote] then
 			Indexed[remote] = true
@@ -1942,6 +2055,49 @@ local newnamecall = newcclosure(function(...)
 				if blockcheck then return end
 			end
 		end
+	elseif method and (method == "HttpGet" or method == "httpget") then
+		if typeof(...) == 'Instance' then
+			local remote = cloneref(...)
+
+			if IsA(remote,"DataModel") then    
+				local args = {select(2,...)}
+
+				local data = {
+					method = "get",
+					args = deepclone(args),
+					infofunc = infofunc,
+					callingscript = identifyexecutor and identifyexecutor() or "Unknow exploit",
+					metamethod = "__httpget",
+					returnvalue = {},
+					url = args[1],
+				}
+				args = nil
+
+				if configs.funcEnabled then
+					data.infofunc = info(2,"f")
+					local calling = getcallingscript()
+					data.callingscript = calling and cloneref(calling) or nil
+				end
+
+				schedule(remoteHandler,data)
+
+				if configs.logreturnvalues then
+					local thread = running()
+					local returnargs = {...}
+					local returndata
+
+					spawn(function()
+						returndata = originalHttpGet(unpack(returnargs))
+						data.returnvalue.data = returndata
+						if ThreadIsNotDead(thread) then
+							resume(thread)
+						end
+					end)
+					yield()
+					return returndata
+				end
+			end
+		end
 	end
 	return originalnamecall(...)
 end)
@@ -1958,6 +2114,42 @@ local newInvokeServer = newcclosure(function(...)
 	return newindex("InvokeServer",originalFunction,...)
 end)
 
+local newHttpGet = newcclosure(function(...)
+	local args = {select(2,...)}
+
+	local data = {
+		method = "get",
+		args = deepclone(args),
+		infofunc = infofunc,
+		callingscript = identifyexecutor and identifyexecutor() or "Unknow exploit",
+		metamethod = "__httpget",
+		returnvalue = {},
+		url = args[1],
+	}
+	args = nil
+
+	if configs.funcEnabled then
+		data.infofunc = info(2,"f")
+		local calling = getcallingscript()
+		data.callingscript = calling and cloneref(calling) or nil
+	end
+
+	schedule(remoteHandler,data)
+
+	if configs.logreturnvalues then
+		local returnargs = {...}
+		local returndata
+
+		spawn(function()
+			returndata = originalHttpGet(unpack(returnargs))
+			data.returnvalue.data = returndata
+		end)
+		return returndata
+	end
+	
+	return originalHttpGet(...)
+end)
+
 
 
 local function disablehooks()
@@ -1968,11 +2160,18 @@ local function disablehooks()
 		unhook(Instance.new("RemoteEvent").FireServer, originalEvent)
 		unhook(Instance.new("RemoteFunction").InvokeServer, originalFunction)
 		unhook(Instance.new("UnreliableRemoteEvent").FireServer, originalUnreliableEvent)
+		unhook(game.HttpGet,originalHttpGet)
+		for i,v in pairs(RequestHook) do
+			unhook(i,v)
+			restorefunction(v)
+		end
 		restorefunction(originalnamecall)
 		restorefunction(originalindex)
 		restorefunction(originalnewindex)
 		restorefunction(originalEvent)
 		restorefunction(originalFunction)
+		restorefunction(originalUnreliableEvent)
+		restorefunction(originalHttpGet)
 	else
 		if hookmetamethod then
 			hookmetamethod(game,"__namecall",originalnamecall)
@@ -1986,6 +2185,10 @@ local function disablehooks()
 		hookfunction(Instance.new("RemoteEvent").FireServer, originalEvent)
 		hookfunction(Instance.new("RemoteFunction").InvokeServer, originalFunction)
 		hookfunction(Instance.new("UnreliableRemoteEvent").FireServer, originalUnreliableEvent)
+		hookfunction(game.HttpGet,originalHttpGet)
+		for i,v in pairs(RequestHook) do
+			hookfunction(i,v)
+		end
 	end
 	for _,v in pairs(OldSignal) do
 		hookfunction(v,v)
@@ -2059,6 +2262,15 @@ function toggleSpy()
 				oldindex = hookfunction(getrawmetatable(game).__index,clonefunction(indexcall))
 			end
 		end
+		
+		for i,v in pairs(RequestFunctions) do
+			if v and typeof(v) == "function" then
+				RequestHook[v] = hookfunction(v, newcclosure(function(...)
+					return NewHttp(RequestHook[v],...)
+				end))
+			end
+		end
+		
 		originalnamecall = originalnamecall or function(...)
 			return oldnamecall(...)
 		end
@@ -2071,13 +2283,16 @@ function toggleSpy()
 
 		if synv3 then
 			originalEvent = hook(Instance.new("RemoteEvent").FireServer, clonefunction(newFireServer))
+			originalHttpGet = hook(game.HttpGet,clonefunction(newHttpGet))
 			originalFunction = hook(Instance.new("RemoteFunction").InvokeServer, clonefunction(newInvokeServer))
 			originalUnreliableEvent = hook(Instance.new("UnreliableRemoteEvent").FireServer, clonefunction(newUnreliableFireServer))
 		else
 			originalEvent = hookfunction(Instance.new("RemoteEvent").FireServer, clonefunction(newFireServer))
+			originalHttpGet = hookfunction(game.HttpGet,clonefunction(newHttpGet))
 			originalFunction = hookfunction(Instance.new("RemoteFunction").InvokeServer, clonefunction(newInvokeServer))
 			originalUnreliableEvent = hookfunction(Instance.new("UnreliableRemoteEvent").FireServer, clonefunction(newUnreliableFireServer))
 		end
+		
 	else
 		disablehooks()
 	end
@@ -2258,6 +2473,22 @@ newButton("Run Code",
 					else
 						returnvalue = clonefunction(getcallbackmember(Remote,"OnClientInvoke"))(unpack(selected.args))
 					end
+				end
+
+				TextLabel.Text = ("Executed successfully!\n%s"):format(v2s(returnvalue))
+			end,function(err)
+				TextLabel.Text = ("Execution error!\n%s"):format(err)
+			end)
+			return
+		elseif selected.metamethod == "__httpget" or selected.metamethod == "__httprequest" then
+			TextLabel.Text = "Executing..."
+			xpcall(function()
+				local returnvalue
+				
+				if selected.metamethod == "__httpget" then
+					returnvalue = game:HttpGet(unpack(selected.args))
+				elseif selected.metamethod == "__httprequest" then
+					returnvalue = request(unpack(selected.args))
 				end
 
 				TextLabel.Text = ("Executed successfully!\n%s"):format(v2s(returnvalue))
@@ -2471,15 +2702,10 @@ newButton(
 	function() return "Get a Remote's return data" end,
 	function()
 		if selected then
-			local Remote = selected.Remote
-			if Remote and Remote:IsA("RemoteFunction") then
-				if selected.returnvalue and selected.returnvalue.data then
-					return codebox:setRaw(v2s(selected.returnvalue.data))
-				end
-				return codebox:setRaw("No data was returned")
-			else
-				codebox:setRaw("RemoteFunction expected got "..(Remote and Remote.ClassName))
+			if selected.returnvalue and selected.returnvalue.data then
+				return codebox:setRaw(v2s(selected.returnvalue.data))
 			end
+			return codebox:setRaw("No data was returned")
 		end
 	end
 )
@@ -2499,6 +2725,28 @@ newButton(
 	function()
 		configs.autoblock = not configs.autoblock
 		TextLabel.Text = string.format("[%s] [BETA] Intelligently detects and excludes spammy remote calls from logs", configs.autoblock and "ENABLED" or "DISABLED")
+		history = {}
+		excluding = {}
+	end
+)
+
+newButton(
+	"Client Log",
+	function() return string.format("[%s]", configs.clientlog and "ENABLED" or "DISABLED") end,
+	function()
+		configs.clientlog = not configs.clientlog
+		TextLabel.Text = string.format("[%s]", configs.clientlog and "ENABLED" or "DISABLED")
+		history = {}
+		excluding = {}
+	end
+)
+
+newButton(
+	"Http Log",
+	function() return string.format("[%s]", configs.httplog and "ENABLED" or "DISABLED") end,
+	function()
+		configs.httplog = not configs.httplog
+		TextLabel.Text = string.format("[%s]", configs.httplog and "ENABLED" or "DISABLED")
 		history = {}
 		excluding = {}
 	end
