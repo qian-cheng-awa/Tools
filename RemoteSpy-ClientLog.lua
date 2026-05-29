@@ -1869,6 +1869,7 @@ local newindex = function(method,originalfunction,...)
 end
 
 local NewHttp = function(old,...)
+	if not configs.httplog then return old(...) end
 	local args = {...}
 
 	local data = {
@@ -2056,6 +2057,7 @@ local newnamecall = newcclosure(function(...)
 			end
 		end
 	elseif method and (method == "HttpGet" or method == "httpget") then
+		if not configs.httplog then return originalnamecall(...) end
 		if typeof(...) == 'Instance' then
 			local remote = cloneref(...)
 
@@ -2115,6 +2117,7 @@ local newInvokeServer = newcclosure(function(...)
 end)
 
 local newHttpGet = newcclosure(function(...)
+	if not configs.httplog then return originalHttpGet(...) end
 	local args = {select(2,...)}
 
 	local data = {
