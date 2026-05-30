@@ -1,8 +1,8 @@
 --!native
 -- https://github.com/78n/SimpleSpy 50/50 this breaks but it's a beta for a reason!
 
-if getgenv().SimpleSpyExecuted and type(getgenv().SimpleSpyShutdown) == "function" then
-	getgenv().SimpleSpyShutdown()
+if getgenv().SimpleSpyExecutedBXV and type(getgenv().SimpleSpyShutdownBXV) == "function" then
+	getgenv().SimpleSpyShutdownBXV()
 end
 
 local realconfigs = {
@@ -18,13 +18,19 @@ local realconfigs = {
 
 local configs = newproxy(true)
 local configsmetatable = getmetatable(configs)
-local getcallbackmember = getcallbackmember or getcallbackvalue
+local getcallbackmember = clonefunction(getcallbackmember or getcallbackvalue)
 configsmetatable.__index = function(self,index)
 	return realconfigs[index]
 end
 local oth = syn and syn.oth
 local unhook = oth and oth.unhook
 local hook = oth and oth.hook
+if hook then
+	hook = clonefunction(hook)
+end
+if unhook then
+	unhook = clonefunction(unhook)
+end
 
 local RequestHook = {}
 local RequestFunctions = {
@@ -33,58 +39,58 @@ local RequestFunctions = {
 	http_request,
 }
 
-local lower = string.lower
-local byte = string.byte
-local round = math.round
-local running = coroutine.running
-local resume = coroutine.resume
-local status = coroutine.status
-local yield = coroutine.yield
-local create = coroutine.create
-local close = coroutine.close
-local OldDebugId = game.GetDebugId
-local info = debug.info
+local lower = clonefunction(string.lower)
+local byte = clonefunction(string.byte)
+local round = clonefunction(math.round)
+local running = clonefunction(coroutine.running)
+local resume = clonefunction(coroutine.resume)
+local status = clonefunction(coroutine.status)
+local yield = clonefunction(coroutine.yield)
+local create = clonefunction(coroutine.create)
+local close = clonefunction(coroutine.close)
+local OldDebugId = clonefunction(game.GetDebugId)
+local info = clonefunction(debug.info)
 
-local IsA = game.IsA
-local tostring = tostring
-local tonumber = tonumber
-local delay = task.delay
-local spawn = task.spawn
-local clear = table.clear
-local clone = table.clone
+local IsA = clonefunction(game.IsA)
+local tostring = clonefunction(tostring)
+
+local tonumber = clonefunction(tonumber)
+local delay = clonefunction(task.delay)
+local spawn = clonefunction(task.spawn)
+local clear = clonefunction(table.clear)
+local clone = clonefunction(table.clone)
 
 local function blankfunction(...)
 	return ...
 end
 
-local get_thread_identity = (syn and syn.get_thread_identity) or getidentity or getthreadidentity
-local set_thread_identity = (syn and syn.set_thread_identity) or setidentity
-local islclosure = islclosure or is_l_closure
+local get_thread_identity = clonefunction((syn and syn.get_thread_identity) or getidentity or getthreadidentity or blankfunction)
+local set_thread_identity = clonefunction((syn and syn.set_thread_identity) or setidentity or blankfunction)
+local islclosure = clonefunction(islclosure or is_l_closure or function() end)
 local threadfuncs = (get_thread_identity and set_thread_identity and true) or false
 
-local getinfo = getinfo or blankfunction
-local getupvalues = getupvalues or debug.getupvalues or blankfunction
-local getconstants = getconstants or debug.getconstants or blankfunction
+local getinfo = clonefunction(getinfo or blankfunction)
+local getupvalues = clonefunction(getupvalues or debug.getupvalues or blankfunction)
+local getconstants = clonefunction(getconstants or debug.getconstants or blankfunction)
 
-local getcustomasset = getsynasset or getcustomasset
-local getcallingscript = getcallingscript or blankfunction
-local newcclosure = newcclosure or blankfunction
-local clonefunction = clonefunction or blankfunction
-local cloneref = cloneref or blankfunction
-local request = request or syn and syn.request
-local makewritable = makewriteable or function(tbl)
+local getcustomasset = clonefunction(getsynasset or getcustomasset or blankfunction)
+local getcallingscript = clonefunction(getcallingscript or blankfunction)
+local newcclosure = clonefunction(newcclosure or blankfunction)
+local cloneref = clonefunction(cloneref or blankfunction)
+local request = clonefunction(request or syn and syn.request)
+local makewritable = clonefunction(makewriteable or function(tbl)
 	setreadonly(tbl,false)
-end
-local makereadonly = makereadonly or function(tbl)
+end)
+local makereadonly = clonefunction(makereadonly or function(tbl)
 	setreadonly(tbl,true)
-end
-local isreadonly = isreadonly or table.isfrozen
+end)
+local isreadonly = clonefunction(isreadonly or table.isfrozen)
 
-local setclipboard = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set) or function(...)
+local setclipboard = clonefunction(setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set) or function(...)
 	return ErrorPrompt("Attempted to set clipboard: "..(...),true)
-end
+end)
 
-local hookmetamethod = hookmetamethod or (makewriteable and makereadonly and getrawmetatable) and function(obj: object, metamethod: string, func: Function)
+local hookmetamethod = clonefunction(hookmetamethod or (makewriteable and makereadonly and getrawmetatable) and function(obj: object, metamethod: string, func: Function)
 	local old = getrawmetatable(obj)
 
 	if hookfunction then
@@ -96,7 +102,7 @@ local hookmetamethod = hookmetamethod or (makewriteable and makereadonly and get
 		makereadonly(old)
 		return oldmetamethod
 	end
-end
+end)
 
 local function Create(instance, properties, children)
 	local obj = Instance.new(instance)
@@ -723,7 +729,7 @@ function mouseEntered()
 	connections["SIMPLESPY_CURSOR"] = RunService.RenderStepped:Connect(function()
 		UserInputService.MouseIconEnabled = not mouseInGui
 		customCursor.Visible = mouseInGui
-		if mouseInGui and getgenv().SimpleSpyExecuted then
+		if mouseInGui and getgenv().SimpleSpyExecutedBXV then
 			local mouseLocation = UserInputService:GetMouseLocation() - GuiInset
 			customCursor.Position = UDim2.fromOffset(mouseLocation.X - customCursor.AbsoluteSize.X / 2, mouseLocation.Y - customCursor.AbsoluteSize.Y / 2)
 			local inRange, type = isInResizeRange(mouseLocation)
@@ -996,11 +1002,11 @@ function newRemote(type, data)
 			Parent = RemoteTemplate,
 			BackgroundColor3 = (
 				type == "event" and Color3.fromRGB(255, 242, 0) or
-				type == "function" and	Color3.fromRGB(99, 86, 245) or
-				type == "clientevent" and Color3.fromRGB(230, 144, 87) or
-				type == "clientfunction" and Color3.fromRGB(121, 51, 112) or
-				type == "httprequest" and Color3.fromRGB(47, 255, 0) or 
-				type == "httpget" and Color3.fromRGB(0, 229, 255)
+					type == "function" and	Color3.fromRGB(99, 86, 245) or
+					type == "clientevent" and Color3.fromRGB(230, 144, 87) or
+					type == "clientfunction" and Color3.fromRGB(121, 51, 112) or
+					type == "httprequest" and Color3.fromRGB(47, 255, 0) or 
+					type == "httpget" and Color3.fromRGB(0, 229, 255)
 			),
 			BorderSizePixel = 0,
 			Position = UDim2.new(0, 0, 0, 1),
@@ -1008,7 +1014,7 @@ function newRemote(type, data)
 			ZIndex = 2
 		}
 	)
-	
+
 	local Text = Create(
 		"TextLabel",
 		{
@@ -1027,7 +1033,7 @@ function newRemote(type, data)
 			TextXAlignment = Enum.TextXAlignment.Left
 		}
 	)
-	
+
 	local Button = Create(
 		"TextButton",
 		{
@@ -1791,7 +1797,7 @@ function remoteHandler(data)
 		end
 		history[id].lastCall = tick()
 	end
-	
+
 	if data.metamethod == "__httprequest" then
 		newRemote("httprequest",data)
 	elseif data.metamethod == "__httpget" then
@@ -1868,7 +1874,7 @@ local newindex = function(method,originalfunction,...)
 	return originalfunction(...)
 end
 
-local NewHttp = function(old,...)
+local NewHttp = newcclosure(function(old,...)
 	if not configs.httplog then return old(...) end
 	local args = {...}
 
@@ -1901,7 +1907,7 @@ local NewHttp = function(old,...)
 	end
 
 	return old(...)
-end
+end)
 
 local NewSingal = function(oremote,signal,old,...)
 	local remote = cloneref(oremote)
@@ -2132,7 +2138,7 @@ local newHttpGet = newcclosure(function(...)
 		data.returnvalue.data = returndata
 		return returndata
 	end
-	
+
 	return originalHttpGet(...)
 end)
 
@@ -2248,7 +2254,7 @@ function toggleSpy()
 				oldindex = hookfunction(getrawmetatable(game).__index,clonefunction(indexcall))
 			end
 		end
-		
+
 		for i,v in pairs(RequestFunctions) do
 			if v and typeof(v) == "function" then
 				RequestHook[v] = hookfunction(v, newcclosure(function(...)
@@ -2256,7 +2262,7 @@ function toggleSpy()
 				end))
 			end
 		end
-		
+
 		originalnamecall = originalnamecall or function(...)
 			return oldnamecall(...)
 		end
@@ -2278,7 +2284,7 @@ function toggleSpy()
 			originalFunction = hookfunction(Instance.new("RemoteFunction").InvokeServer, clonefunction(newInvokeServer))
 			originalUnreliableEvent = hookfunction(Instance.new("UnreliableRemoteEvent").FireServer, clonefunction(newUnreliableFireServer))
 		end
-		
+
 	else
 		disablehooks()
 	end
@@ -2314,16 +2320,16 @@ local function shutdown()
 	SimpleSpy3:Destroy()
 	Storage:Destroy()
 	UserInputService.MouseIconEnabled = true
-	getgenv().SimpleSpyExecuted = false
+	getgenv().SimpleSpyExecutedBXV = false
 end
 
 -- main
-if not getgenv().SimpleSpyExecuted then
+if not getgenv().SimpleSpyExecutedBXV then
 	local succeeded,err = pcall(function()
 		if not RunService:IsClient() then
 			error("SimpleSpy cannot run on the server!")
 		end
-		getgenv().SimpleSpyShutdown = shutdown
+		getgenv().SimpleSpyShutdownBXV = shutdown
 		onToggleButtonClick()
 		if not hookmetamethod then
 			ErrorPrompt("Simple Spy V3 will not function to it's fullest capablity due to your executor not supporting hookmetamethod.",true)
@@ -2379,7 +2385,7 @@ if not getgenv().SimpleSpyExecuted then
 		end))
 	end)
 	if succeeded then
-		getgenv().SimpleSpyExecuted = true
+		getgenv().SimpleSpyExecutedBXV = true
 	else
 		warn("An error has occured:\n"..rawtostring(err))
 		shutdown()
@@ -2470,7 +2476,7 @@ newButton("Run Code",
 			TextLabel.Text = "Executing..."
 			xpcall(function()
 				local returnvalue
-				
+
 				if selected.metamethod == "__httpget" then
 					returnvalue = game:HttpGet(unpack(selected.args))
 				elseif selected.metamethod == "__httprequest" then
