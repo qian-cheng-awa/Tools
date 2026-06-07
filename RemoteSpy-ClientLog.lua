@@ -32,12 +32,7 @@ if unhook then
 	unhook = clonefunction(unhook)
 end
 
-local RequestHook = {}
-local RequestFunctions = {
-	syn and syn.request,
-	request,
-	http_request,
-}
+local ORequest = syn and syn.request or request or http_request
 
 local lower = clonefunction(string.lower)
 local byte = clonefunction(string.byte)
@@ -1874,8 +1869,8 @@ local newindex = function(method,originalfunction,...)
 	return originalfunction(...)
 end
 
-local NewHttp = newcclosure(function(old,...)
-	if not configs.httplog then return old(...) end
+local NewHttp = newcclosure(function(...)
+	if not configs.httplog then return ORequest(...) end
 	local args = {...}
 
 	local data = {
@@ -1901,12 +1896,12 @@ local NewHttp = newcclosure(function(old,...)
 		local returnargs = {...}
 		local returndata
 
-		returndata = old(unpack(returnargs))
+		returndata = ORequest(unpack(returnargs))
 		data.returnvalue.data = returndata
 		return returndata
 	end
 
-	return old(...)
+	return ORequest(...)
 end)
 
 local NewSingal = function(oremote,signal,old,...)
@@ -2153,10 +2148,6 @@ local function disablehooks()
 		unhook(Instance.new("RemoteFunction").InvokeServer, originalFunction)
 		unhook(Instance.new("UnreliableRemoteEvent").FireServer, originalUnreliableEvent)
 		unhook(game.HttpGet,originalHttpGet)
-		for i,v in pairs(RequestHook) do
-			unhook(i,v)
-			restorefunction(v)
-		end
 		restorefunction(originalnamecall)
 		restorefunction(originalindex)
 		restorefunction(originalnewindex)
@@ -2178,9 +2169,13 @@ local function disablehooks()
 		hookfunction(Instance.new("RemoteFunction").InvokeServer, originalFunction)
 		hookfunction(Instance.new("UnreliableRemoteEvent").FireServer, originalUnreliableEvent)
 		hookfunction(game.HttpGet,originalHttpGet)
-		for i,v in pairs(RequestHook) do
-			hookfunction(i,v)
-		end
+	end
+	getgenv().http.request = ORequest
+	getgenv().http_request = ORequest
+	getgenv().request = ORequest
+
+	if syn and syn.request then
+		syn.request = ORequest
 	end
 	for _,v in pairs(OldSignal) do
 		hookfunction(v,v)
@@ -2254,13 +2249,13 @@ function toggleSpy()
 				oldindex = hookfunction(getrawmetatable(game).__index,clonefunction(indexcall))
 			end
 		end
+		
+		getgenv().http.request = NewHttp
+		getgenv().http_request = NewHttp
+		getgenv().request = NewHttp
 
-		for i,v in pairs(RequestFunctions) do
-			if v and typeof(v) == "function" then
-				RequestHook[v] = hookfunction(v, newcclosure(function(...)
-					return NewHttp(RequestHook[v],...)
-				end))
-			end
+		if syn and syn.request then
+			syn.request = NewHttp
 		end
 
 		originalnamecall = originalnamecall or function(...)
