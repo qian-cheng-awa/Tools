@@ -273,6 +273,7 @@ function EspLib:WrapObject(Args)
 		end
 		
 		NewInfo.Name = tostring(i)
+		NewInfo.Parent = NewUi.Box.Infos
 	end
 	
 	ChangeColor("Text",Args.Color.Text)
