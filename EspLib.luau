@@ -102,6 +102,7 @@ local UIStroke = Instance.new("UIStroke")
 UIStroke.Parent = HealthDisplay
 
 function EspLib:WrapObject(Args)
+	Args.Configs = Args.Configs or {}
 	if not Args.Object then return end
 	Args = {
 		Object = Args.Object,
