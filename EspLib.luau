@@ -145,6 +145,7 @@ Template.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 
 function EspLib:WrapObject(Args)
 	Args.Configs = Args.Configs or {}
+	Args.Color = Args.Color or {}
 	if not Args.Object then return end
 	Args = {
 		Object = Args.Object,
@@ -162,7 +163,7 @@ function EspLib:WrapObject(Args)
 	}
 	
 	local NewUi = Main:Clone()
-	
+	NewUi.MaxDistance = Args.RenderDistance
 	NewUi.Box.UIStroke.Enabled = Args.Configs.Box
 	
 	local Object = Args.Object
