@@ -1,6 +1,18 @@
+local Player = game:GetService("Players").LocalPlayer
 local EspLib = {
 	Objects = {},
 }
+
+local GuiMain = Player.PlayerGui
+if gethui then
+	GuiMain = gethui()
+elseif game.CoreGui then
+	GuiMain = game.CoreGui
+end
+
+local EspFolder = GuiMain:FindFirstChild("ESP") or Instance.new("Folder",GuiMain)
+EspFolder.Name = "Bi_Xie Esp"
+EspFolder:ClearAllChildren()
 
 local Main = Instance.new("BillboardGui")
 Main.LightInfluence = 1
@@ -205,8 +217,11 @@ function EspLib:WrapObject(Args)
 		EspLib:UnwrapObject(Object)
 	end)
 	
+	NewUi.Parent = EspFolder
+	NewUi.Adornee = Object
+	
 	return {
-		ChangeColor = ChangeColor
+		ChangeColor = ChangeColor,
 	}
 end
 
