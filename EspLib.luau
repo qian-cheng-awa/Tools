@@ -186,7 +186,7 @@ function EspLib:WrapObject(Args)
 				local MaxHealth = Humanoid.MaxHealth
 
 				HealthDisplay.Text = `{math.floor(Health*10)/10}/{math.floor(MaxHealth*10)/10}`
-				HealthBar.Frame.Size = UDim2.fromScale(1,Health/MaxHealth)
+				HealthBar.Frame.Size = UDim2.fromScale(Health/MaxHealth,1)
 			end
 
 			Update()
