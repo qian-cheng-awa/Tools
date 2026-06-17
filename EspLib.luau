@@ -37,7 +37,6 @@ if not Drawing or not Drawing.new or not Drawing.Fonts then
 	until Drawing and Drawing.new and type(Drawing.new) == "function" and Drawing.Fonts and type(Drawing.Fonts) == "table"
 end
 
-local ConfigLibrary = loadstring(game.HttpGet(game, "https://raw.githubusercontent.com/Exunys/Config-Library/main/Main.lua"))()
 
 local Vector2new, Vector3zero, CFramenew = Vector2.new, Vector3.zero, CFrame.new
 local Drawingnew, DrawingFonts = Drawing.new, Drawing.Fonts
@@ -968,7 +967,7 @@ local CreatingFunctions = {
 		end
 
 		local Settings = Environment.Properties.HeadDot
-		
+
 		local CircleOutline = Drawingnew("Circle")
 		local CircleOutlineObject = CircleOutline--[[._OBJECT]]
 
@@ -1522,8 +1521,8 @@ local UtilityFunctions = {
 
 		if not Entry.IsAPlayer then
 			if not pcall(function()
-				return __index(Entry.Object, "Position"), __index(Entry.Object, "CFrame")
-			end) then
+					return __index(Entry.Object, "Position"), __index(Entry.Object, "CFrame")
+				end) then
 				warn("EXUNYS_ESP > UtilityFunctions.WrapObject - Attempted to wrap object of an unsupported class type: \""..(__index(Entry.Object, "ClassName") or "N / A").."\"")
 				return self.UnwrapObject(Entry.Hash)
 			end
@@ -1808,33 +1807,11 @@ Environment.UpdateConfiguration = function(DeveloperSettings, Settings, Properti
 end
 
 Environment.LoadConfiguration = function(self) -- METHOD | (<void>) => <void>
-	assert(self, "EXUNYS_ESP.LoadConfiguration: Missing parameter #1 \"self\" <table>.")
-
-	local Path = self.DeveloperSettings.Path
-
-	if self:UnwrapAll() then
-		pcall(function()
-			local Configuration, Data = ConfigLibrary:LoadConfig(Path), {}
-
-			for _, Index in next, {"DeveloperSettings", "Settings", "Properties"} do
-				Data[#Data + 1] = ConfigLibrary:CloneTable(Configuration[Index])
-			end
-
-			self.UpdateConfiguration(unpack(Data))()
-		end)
-	end
+	
 end
 
 Environment.SaveConfiguration = function(self) -- METHOD | (<void>) => <void>
-	assert(self, "EXUNYS_ESP.SaveConfiguration: Missing parameter #1 \"self\" <table>.")
-
-	local DeveloperSettings = self.DeveloperSettings
-
-	ConfigLibrary:SaveConfig(DeveloperSettings.Path, {
-		DeveloperSettings = DeveloperSettings,
-		Settings = self.Settings,
-		Properties = self.Properties
-	})
+	
 end
 
 return Environment
