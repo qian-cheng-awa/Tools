@@ -1826,7 +1826,7 @@ local newindex = function(method,originalfunction,...)
 			if not configs.logcheckcaller and checkcaller() then return originalfunction(...) end
 			local id = ThreadGetDebugId(remote)
 			local blockcheck = tablecheck(blocklist,remote,id)
-			
+
 			local args = {select(2,...)}
 
 			if not tablecheck(blacklist,remote,id) and not IsCyclicTable(args) then
@@ -1912,7 +1912,7 @@ local NewHttp = newcclosure(function(...)
 end)
 
 local NewSingal = function(oremote,signal,old,...)
-	local remote = cloneref(oremote)
+	local remote = oremote
 	if IsA(remote,"RemoteEvent") or IsA(remote,"RemoteFunction") or IsA(remote,"UnreliableRemoteEvent") then
 		if not configs.logcheckcaller and checkcaller() then return old(...) end
 		if not configs.clientlog then return old(...) end
@@ -1939,7 +1939,7 @@ local NewSingal = function(oremote,signal,old,...)
 				data.infofunc = info(2,"f")
 				local calling = getcallingscript()
 				if type(calling) == "userdata" then
-					data.callingscript = calling and cloneref(calling) or nil
+					data.callingscript = calling and calling or nil
 				end
 			end
 
@@ -1986,7 +1986,7 @@ end)
 
 local indexcall = newcclosure(function(...)
 	local remote,key = ...
-	
+
 	if type(key) == "string" and key:lower() == "onclientevent" and typeof(remote) == "Instance" and (IsA(remote,"RemoteEvent") or IsA(remote,"UnreliableRemoteEvent")) then
 		if not HookedClientEvents[remote] then
 			addsignal(remote)
@@ -2180,9 +2180,9 @@ local function disablehooks()
 	if syn and syn.request then
 		syn.request = ORequest
 	end
-	
+
 	HookedClientEvents = nil
-	
+
 	for _,v in pairs(OldSignal) do
 		if typeof(v) == "function" then
 			hookfunction(v,v)
@@ -2190,7 +2190,7 @@ local function disablehooks()
 			v:Disconnect()
 		end
 	end
-	
+
 	OldSignal = nil
 end
 
@@ -2199,17 +2199,18 @@ function addsignal(obj,func)
 	if not OldSignal or OldSignal[obj] then
 		return
 	end
-	
+
 	if obj:IsA("RemoteEvent") then
-		local fun = function(...)
+		HookedClientEvents[obj] = function(...)
 			NewSingal(obj,"OnClientEvent",function(...) end,...)
 		end
-		local con = obj.OnClientEvent:Connect(fun)
+		
+		local con = obj.OnClientEvent:Connect(HookedClientEvents[obj])
 		OldSignal[obj] = con
-		HookedClientEvents[obj] = fun
+		
 		return
 	end
-	
+
 	if obj:IsA("RemoteFunction") and getcallbackmember then
 		if getcallbackmember(obj,"OnClientInvoke") then
 			OldSignal[obj] = getcallbackmember(obj,"OnClientInvoke")
