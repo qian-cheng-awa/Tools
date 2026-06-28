@@ -276,8 +276,10 @@ local logs = {}
 local selected = nil
 --- The blacklist (can be a string name or the Remote Instance)
 local blacklist = {}
+local localblacklist = {}
 --- The block list (can be a string name or the Remote Instance)
 local blocklist = {}
+local localblocklist = {}
 --- Whether or not to add getNil function
 local getNil = false
 --- Array of remotes (and original functions) connected to
@@ -289,6 +291,10 @@ local prevTables = {}
 --- holds logs (for deletion)
 local remoteLogs = {}
 --- used for hookfunction
+
+local HookedClientEvents = {}
+local DontHook = {}
+
 getgenv().SIMPLESPYCONFIG_MaxRemotes = 300
 local indent = 4
 local scheduled = {}
@@ -1820,6 +1826,7 @@ local newindex = function(method,originalfunction,...)
 			if not configs.logcheckcaller and checkcaller() then return originalfunction(...) end
 			local id = ThreadGetDebugId(remote)
 			local blockcheck = tablecheck(blocklist,remote,id)
+			
 			local args = {select(2,...)}
 
 			if not tablecheck(blacklist,remote,id) and not IsCyclicTable(args) then
@@ -1911,10 +1918,10 @@ local NewSingal = function(oremote,signal,old,...)
 		if not configs.clientlog then return old(...) end
 
 		local id = ThreadGetDebugId(remote)
-		local blockcheck = tablecheck(blocklist,remote,id)
+		local blockcheck = tablecheck(localblocklist,remote,id)
 		local args = {...}
 
-		if not tablecheck(blacklist,remote,id) and not IsCyclicTable(args) then
+		if not tablecheck(localblacklist,remote,id) and not IsCyclicTable(args) then
 			local data = {
 				method = signal,
 				remote = oremote,
@@ -1961,7 +1968,6 @@ local NewSingal = function(oremote,signal,old,...)
 	return old(...)
 end
 
-local Indexed = {}
 local OldSignal = {}
 
 local newindexcall = newcclosure(function(...)
@@ -1980,11 +1986,10 @@ end)
 
 local indexcall = newcclosure(function(...)
 	local remote,key = ...
-
+	
 	if type(key) == "string" and key:lower() == "onclientevent" and typeof(remote) == "Instance" and (IsA(remote,"RemoteEvent") or IsA(remote,"UnreliableRemoteEvent")) then
-		if not Indexed[remote] and not OldSignal[remote] then
-			Indexed[remote] = true
-			addsignal(remote,true)
+		if not HookedClientEvents[remote] then
+			addsignal(remote)
 		end
 	end
 
@@ -2137,8 +2142,6 @@ local newHttpGet = newcclosure(function(...)
 	return originalHttpGet(...)
 end)
 
-
-
 local function disablehooks()
 	if synv3 then
 		unhook(getrawmetatable(game).__namecall,originalnamecall)
@@ -2177,38 +2180,37 @@ local function disablehooks()
 	if syn and syn.request then
 		syn.request = ORequest
 	end
+	
+	HookedClientEvents = nil
+	
 	for _,v in pairs(OldSignal) do
-		hookfunction(v,v)
+		if typeof(v) == "function" then
+			hookfunction(v,v)
+		elseif typeof(v) == "RBXScriptConnection" then
+			v:Disconnect()
+		end
 	end
+	
+	OldSignal = nil
 end
-
-local UnHookedRemote = {}
 
 --- Toggles on and off the remote spy
 function addsignal(obj,func)
-	if OldSignal[obj] then
+	if not OldSignal or OldSignal[obj] then
 		return
 	end
-
-	if obj:IsA("RemoteEvent") or obj:IsA("UnreliableRemoteEvent") then
-		if not getconnections(obj.OnClientEvent)[1] then
-			if func then
-				UnHookedRemote[obj] = true
-			end
-			return
+	
+	if obj:IsA("RemoteEvent") then
+		local fun = function(...)
+			NewSingal(obj,"OnClientEvent",function(...) end,...)
 		end
-		for i,v in pairs(getconnections(obj.OnClientEvent)) do
-			if v.Function then
-				OldSignal[obj] = v.Function
-				local old;old = hookfunction(v.Function, function(...)
-					return NewSingal(obj,"OnClientEvent",old,...)
-				end)
-				UnHookedRemote[obj] = nil
-			elseif func then
-				UnHookedRemote[obj] = true
-			end
-		end
-	elseif obj:IsA("RemoteFunction") and getcallbackmember then
+		local con = obj.OnClientEvent:Connect(fun)
+		OldSignal[obj] = con
+		HookedClientEvents[obj] = fun
+		return
+	end
+	
+	if obj:IsA("RemoteFunction") and getcallbackmember then
 		if getcallbackmember(obj,"OnClientInvoke") then
 			OldSignal[obj] = getcallbackmember(obj,"OnClientInvoke")
 			local old;old = hookfunction(getcallbackmember(obj,"OnClientInvoke"), function(...)
@@ -2222,12 +2224,6 @@ function addsignal(obj,func)
 		end
 	end
 end
-
-game:GetService("RunService").RenderStepped:Connect(function()
-	for obj,bool in pairs(UnHookedRemote) do
-		addsignal(obj)
-	end
-end)
 
 function toggleSpy()
 	if not toggle then
@@ -2249,7 +2245,7 @@ function toggleSpy()
 				oldindex = hookfunction(getrawmetatable(game).__index,clonefunction(indexcall))
 			end
 		end
-		
+
 		getgenv().http.request = NewHttp
 		getgenv().http_request = NewHttp
 		getgenv().request = NewHttp
@@ -2288,6 +2284,10 @@ end
 for _,v in ipairs(game:GetDescendants()) do
 	addsignal(v)
 end
+
+game.DescendantAdded:Connect(function(v)
+	addsignal(v)
+end)
 --- Toggles between the two remotespy methods (hookfunction currently = disabled)
 function toggleSpyMethod()
 	toggleSpy()
@@ -2463,9 +2463,9 @@ newButton("Run Code",
 				end
 
 				TextLabel.Text = ("Executed successfully!\n%s"):format(v2s(returnvalue))
-			end,function(err)
+			end,error--[[function(err)
 				TextLabel.Text = ("Execution error!\n%s"):format(err)
-			end)
+			end]])
 			return
 		elseif selected.metamethod == "__httpget" or selected.metamethod == "__httprequest" then
 			TextLabel.Text = "Executing..."
@@ -2617,6 +2617,40 @@ newButton(
 		blacklist = {}
 		TextLabel.Text = "Blacklist cleared!"
 	end)
+
+
+newButton(
+	"ClientEvent Exclude (i)",
+	function() return "Click to exclude this Remote.\nExcluding a remote makes SimpleSpy ignore it, but it will continue to be usable." end,
+	function()
+		if selected then
+			localblacklist[OldDebugId(selected.Remote)] = true
+			TextLabel.Text = "Excluded!"
+		end
+	end
+)
+
+--- Excludes all Remotes that share the same name as the selected.Log remote from the RemoteSpy
+newButton(
+	"ClientEvent Exclude (n)",
+	function() return "Click to exclude all remotes with this name.\nExcluding a remote makes SimpleSpy ignore it, but it will continue to be usable." end,
+	function()
+		if selected then
+			localblacklist[selected.Name] = true
+			TextLabel.Text = "Excluded!"
+		end
+	end
+)
+
+newButton(
+	"Clr ClientEvent Blacklist",
+	function() return "Click to clear the blacklist.\nExcluding a remote makes SimpleSpy ignore it, but it will continue to be usable." end,
+	function()
+		localblacklist = {}
+		TextLabel.Text = "Blacklist cleared!"
+	end)
+
+
 
 --- Prevents the selected.Log Remote from firing the server (still logged)
 newButton(
