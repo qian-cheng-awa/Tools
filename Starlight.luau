@@ -2048,7 +2048,7 @@ repeat
 
 	toDestroy, StarlightUI =
 		StarlightUI,
-	isStudio and script.Parent:FindFirstChild("Starlight V2") or game:GetObjects("rbxassetid://" .. modelId)[1]
+		isStudio and script.Parent:FindFirstChild("Starlight V2") or game:GetObjects("rbxassetid://" .. modelId)[1]
 	if toDestroy and not isStudio then
 		toDestroy:Destroy()
 	end
@@ -5049,15 +5049,13 @@ function Starlight:CreateWindow(WindowSettings)
 								or Input.UserInputType == Enum.UserInputType.Touch
 							then
 								Element.SLDragging = true
-							end
-						end)
-
-						Element.Instance.PART_Backdrop.Interact.InputEnded:Connect(function(Input)
-							if
-								Input.UserInputType == Enum.UserInputType.MouseButton1
-								or Input.UserInputType == Enum.UserInputType.Touch
-							then
-								Element.SLDragging = false
+								
+								local a;a = UserInputService.InputEnded:Connect(function(Input)
+									if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+										Element.SLDragging = false
+										a:Disconnect()
+									end
+								end)
 							end
 						end)
 
@@ -5067,15 +5065,13 @@ function Starlight:CreateWindow(WindowSettings)
 								or Input.UserInputType == Enum.UserInputType.Touch
 							then
 								Element.SLDragging = true
-							end
-						end)
-
-						Element.Instance.PART_Backdrop.PART_Progress.Knob.Interact.InputEnded:Connect(function(Input)
-							if
-								Input.UserInputType == Enum.UserInputType.MouseButton1
-								or Input.UserInputType == Enum.UserInputType.Touch
-							then
-								Element.SLDragging = false
+								
+								local a;a = UserInputService.InputEnded:Connect(function(Input)
+									if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+										Element.SLDragging = false
+										a:Disconnect()
+									end
+								end)
 							end
 						end)
 
