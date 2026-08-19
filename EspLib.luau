@@ -155,29 +155,42 @@ function EspLib:WrapObject(Args)
 			Box = Args.Configs.Box or true,
 		},
 		RenderDistance = Args.RenderDistance or math.huge,
-		Color = {
-			Text = Args.Color.Text or Color3.fromRGB(255, 255, 255),
-			Box = Args.Color.Box or Color3.fromRGB(255, 255, 255),
-		},
+		
 		Infos = Args.Infos or {},
 	}
 	
+	if Args.Color then
+		if typeof(Args.Color) == "table" then
+			Args.Color = {
+				Text = Args.Color.Text or Color3.fromRGB(255, 255, 255),
+				Box = Args.Color.Box or Color3.fromRGB(255, 255, 255),
+			}
+		else
+			Args.Color = Args.Color
+		end
+	else
+		Args.Color = {
+			Text = Color3.fromRGB(255, 255, 255),
+			Box = Color3.fromRGB(255, 255, 255),
+		}
+	end
+
 	local NewUi = Main:Clone()
 	NewUi.MaxDistance = Args.RenderDistance
 	NewUi.Box.UIStroke.Enabled = Args.Configs.Box
-	
+
 	local Object = Args.Object
-	
+
 	if Object:IsA("Model") then
 		local Position,Size = Object:GetBoundingBox()
 		NewUi.Size = UDim2.new(math.max(Size.X,Size.Z),300,Size.Y,200)
-		
+
 		if not Object:FindFirstChild("Humanoid") or not Args.Configs.HealthBar then
 			NewUi.Box.HealthBar:Destroy()
 			NewUi.Box.HealthDisplay:Destroy()
 		else
 			local Humanoid = Object:FindFirstChild("Humanoid")
-			
+
 			local HealthBar = NewUi.Box.HealthBar
 			local HealthDisplay = NewUi.Box.HealthDisplay
 
@@ -197,11 +210,11 @@ function EspLib:WrapObject(Args)
 	elseif Object:IsA("BasePart") then
 		NewUi.Size = UDim2.new(math.max(Object.Size.X,Object.Size.Z),300,Object.Size.Y,200)
 	end
-	
+
 	local TBL = {Ui = NewUi,Connections = {}}
-	
+
 	EspLib.Objects[Object] = TBL
-	
+
 	if Args.DisplayText then
 		if typeof(Args.DisplayText) == "function" then
 			TBL.TextConnect = game:GetService("RunService").RenderStepped:Connect(function()
@@ -216,7 +229,7 @@ function EspLib:WrapObject(Args)
 	else
 		NewUi.Box.Display.Text = Object.Name
 	end
-	
+
 	local function ChangeColor(Obj,Color)
 		if Obj:lower() == "text" then
 			local function Update(Color)
@@ -225,12 +238,12 @@ function EspLib:WrapObject(Args)
 					NewUi.Box.HealthDisplay.TextColor3 = Color
 				end
 			end
-			
+
 			if typeof(Color) == "function" then
 				if TBL.TextColorConnect then
 					TBL.TextColorConnect:Disconnect()
 				end
-				
+
 				TBL.TextColorConnect = game:GetService("RunService").RenderStepped:Connect(function()
 					Update(Color(Object))
 				end)
@@ -241,12 +254,12 @@ function EspLib:WrapObject(Args)
 			local function Update(Color)
 				NewUi.Box.UIStroke.Color = Color
 			end
-			
+
 			if typeof(Color) == "function" then
 				if TBL.BoxColorConnect then
 					TBL.BoxColorConnect:Disconnect()
 				end
-				
+
 				TBL.BoxColorConnect = game:GetService("RunService").RenderStepped:Connect(function()
 					Update(Color(Object))
 				end)
@@ -255,15 +268,15 @@ function EspLib:WrapObject(Args)
 			end
 		end	
 	end
-	
+
 	for i,v in pairs(Args.Infos) do
 		local NewInfo = NewUi.Box.Infos.UIListLayout.Template:Clone()
-		
+
 		local function Update(Text,Color)
 			NewInfo.Text = Text or ""
 			NewInfo.TextColor3 = Color or Color3.new(1,1,1)
 		end
-		
+
 		if typeof(v.Text) == "function" or typeof(v.Color) == "function" then
 			table.insert(TBL.Connections,game:GetService("RunService").RenderStepped:Connect(function()
 				Update(GetVal(v.Text,Object),GetVal(v.Color,Object))
@@ -271,21 +284,28 @@ function EspLib:WrapObject(Args)
 		else
 			Update(v.Text,v.Color)
 		end
-		
+
 		NewInfo.Name = tostring(i)
 		NewInfo.Parent = NewUi.Box.Infos
 	end
-	
+
 	ChangeColor("Text",Args.Color.Text)
 	ChangeColor("Box",Args.Color.Box)
-	
-	Object.Destroying:Connect(function()
+
+	Object.Destroying:Once(function()
 		EspLib:UnwrapObject(Object)
+	end)
+
+	local a;a = Object.AncestryChanged:Connect(function()
+		if not Object:IsDescendantOf(workspace) then
+			EspLib:UnwrapObject(Object)
+			a:Disconnect()
+		end
 	end)
 	
 	NewUi.Parent = EspFolder
 	NewUi.Adornee = Object
-	
+
 	return {
 		ChangeColor = ChangeColor,
 	}
@@ -293,27 +313,27 @@ end
 
 function EspLib:UnwrapObject(Object)
 	if not Object then return end
-	
+
 	local Obj = EspLib.Objects[Object]
 	if not Obj then return end
-	
+
 	Obj.Ui:Destroy()
-	
+
 	if Obj.TextConnect then
 		Obj.TextConnect:Disconnect()
 	end
 	if Obj.BoxColorConnect then
 		Obj.BoxColorConnect:Disconnect()
 	end
-	
+
 	if Obj.TextColorConnect then
 		Obj.TextColorConnect:Disconnect()
 	end
-	
+
 	for i,v in pairs(Obj.Connections) do
 		v:Disconnect()
 	end
-	
+
 	EspLib.Objects[Object] = nil
 end
 
