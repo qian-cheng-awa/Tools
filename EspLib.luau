@@ -10,7 +10,11 @@ elseif game.CoreGui then
 	GuiMain = game.CoreGui
 end
 
-local EspFolder = GuiMain:FindFirstChild("ESP") or Instance.new("Folder",GuiMain)
+if GuiMain:FindFirstChild("Bi_Xie Esp") then
+	GuiMain["Bi_Xie Esp"]:Destroy()
+end
+
+local EspFolder = Instance.new("Folder",GuiMain)
 EspFolder.Name = "Bi_Xie Esp"
 EspFolder:ClearAllChildren()
 
@@ -144,8 +148,29 @@ Template.TextScaled = true
 Template.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 
 function EspLib:WrapObject(Args)
+	if EspLib.Objects[Args.Object] then return end
+	
 	Args.Configs = Args.Configs or {}
-	Args.Color = Args.Color or {}
+	
+	if Args.Color then
+		if typeof(Args.Color) == "table" then
+			Args.Color = {
+				Text = Args.Color.Text or Color3.fromRGB(255, 255, 255),
+				Box = Args.Color.Box or Color3.fromRGB(255, 255, 255),
+			}
+		else
+			Args.Color = {
+				Text = Args.Color,
+				Box = Args.Color,
+			}
+		end
+	else
+		Args.Color = {
+			Text = Color3.fromRGB(255, 255, 255),
+			Box = Color3.fromRGB(255, 255, 255),
+		}
+	end
+	
 	if not Args.Object then return end
 	Args = {
 		Object = Args.Object,
@@ -155,25 +180,9 @@ function EspLib:WrapObject(Args)
 			Box = Args.Configs.Box or true,
 		},
 		RenderDistance = Args.RenderDistance or math.huge,
-		
+		Color = Args.Color,
 		Infos = Args.Infos or {},
 	}
-	
-	if Args.Color then
-		if typeof(Args.Color) == "table" then
-			Args.Color = {
-				Text = Args.Color.Text or Color3.fromRGB(255, 255, 255),
-				Box = Args.Color.Box or Color3.fromRGB(255, 255, 255),
-			}
-		else
-			Args.Color = Args.Color
-		end
-	else
-		Args.Color = {
-			Text = Color3.fromRGB(255, 255, 255),
-			Box = Color3.fromRGB(255, 255, 255),
-		}
-	end
 
 	local NewUi = Main:Clone()
 	NewUi.MaxDistance = Args.RenderDistance
@@ -295,14 +304,14 @@ function EspLib:WrapObject(Args)
 	Object.Destroying:Once(function()
 		EspLib:UnwrapObject(Object)
 	end)
-
+	
 	local a;a = Object.AncestryChanged:Connect(function()
 		if not Object:IsDescendantOf(workspace) then
-			EspLib:UnwrapObject(Object)
 			a:Disconnect()
+			EspLib:UnwrapObject(Object)
 		end
 	end)
-	
+
 	NewUi.Parent = EspFolder
 	NewUi.Adornee = Object
 
@@ -312,10 +321,11 @@ function EspLib:WrapObject(Args)
 end
 
 function EspLib:UnwrapObject(Object)
-	if not Object then return end
+	if not Object then return false end
 
 	local Obj = EspLib.Objects[Object]
-	if not Obj then return end
+
+	if not Obj then return false end
 
 	Obj.Ui:Destroy()
 
