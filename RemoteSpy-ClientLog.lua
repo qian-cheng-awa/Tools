@@ -2213,17 +2213,16 @@ function addsignal(obj,func)
 
 	if obj:IsA("RemoteFunction") and getcallbackmember then
 		if getcallbackmember(obj,"OnClientInvoke") then
-			OldSignal[obj] = getcallbackmember(obj,"OnClientInvoke")
-			local old;old = hookfunction(getcallbackmember(obj,"OnClientInvoke"), function(...)
-				return NewSingal(obj,"OnClientInvoke",old,...)
-			end)
-		elseif func then
-			OldSignal[obj] = func
-			local old;old = hookfunction(func, function(...)
-				return NewSingal(obj,"OnClientInvoke",old,...)
-			end)
+            func = getcallbackmember(obj,"OnClientInvoke")
 		end
 	end
+
+    if typeof(func) == "function" then
+        OldSignal[obj] = func
+		local old;old = hookfunction(func, function(...)
+			return NewSingal(obj,"OnClientInvoke",old,...)
+		end)
+    end
 end
 
 function toggleSpy()
