@@ -7614,6 +7614,10 @@ function Starlight:CreateWindow(WindowSettings)
 										if none then
 											Refresh()
 											NestedElement.Values.CurrentOption = {}
+											NestedElement.Instances[1].Header.Text =
+												Table.Unpack(NestedElement.Values.CurrentOption)
+											NestedElement.Instances[1].Header.PlaceholderText = NestedElement.Values.Placeholder
+												or "--"
 										else
 											ToggleOption(optioninstance)
 										end
