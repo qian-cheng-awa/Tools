@@ -7588,8 +7588,8 @@ function Starlight:CreateWindow(WindowSettings)
 										table.insert(NestedElement.Values.Options, v.Name)
 									end
 								end
-								
-								local function CreateNewElement(option,none)
+
+								local function CreateNewElement(option,ex)
 									local optioninstance = Resources.Elements.DropdownPopup.List.Option_TEMPLATE:Clone()
 									optioninstance.Parent = NestedElement.Instances[2].List
 									optioninstance.Name = "OPTION_" .. option
@@ -7611,9 +7611,31 @@ function Starlight:CreateWindow(WindowSettings)
 									end)
 
 									optioninstance.Interact.MouseButton1Click:Connect(function()
-										if none then
+										if ex == 1 then
 											Refresh()
 											NestedElement.Values.CurrentOption = {}
+											NestedElement.Instances[1].Header.Text =
+												Table.Unpack(NestedElement.Values.CurrentOption)
+											NestedElement.Instances[1].Header.PlaceholderText = NestedElement.Values.Placeholder
+												or "--"
+
+											Starlight.Window.TabSections[Name].Tabs[TabIndex].Groupboxes[GroupIndex].Elements[ParentIndex].NestedElements[NestedIndex].Values =
+												NestedElement.Values
+										elseif ex == 2 then
+											Refresh()
+											NestedElement.Values.CurrentOption = {}
+
+											Starlight.Window.TabSections[Name].Tabs[TabIndex].Groupboxes[GroupIndex].Elements[ParentIndex].NestedElements[NestedIndex].Values =
+												NestedElement.Values
+											
+											for i, v in pairs(NestedElement.Values.Options) do
+												for _, optioninstance in pairs(NestedElement.Instances[2].List:GetChildren()) do
+													if optioninstance.Name == "OPTION_" .. v then
+														ToggleOption(optioninstance)
+													end
+												end
+											end
+											
 											NestedElement.Instances[1].Header.Text =
 												Table.Unpack(NestedElement.Values.CurrentOption)
 											NestedElement.Instances[1].Header.PlaceholderText = NestedElement.Values.Placeholder
@@ -7642,9 +7664,10 @@ function Starlight:CreateWindow(WindowSettings)
 										end
 									end)
 								end
-								
+
 								if NestedElement.Values.Special == 3 then
-									CreateNewElement("None",true)
+									CreateNewElement("None",1)
+									CreateNewElement("All",2)
 								end
 
 								-- ipairs so it actually lines up correctly
