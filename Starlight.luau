@@ -4736,99 +4736,105 @@ function Starlight:CreateWindow(WindowSettings)
 
 						function Element:Set(NewElementSettings, NewIndex)
 							NewIndex = NewIndex or Index
-							local oldStyle = Element.Values.Style
+							if typeof(NewElementSettings) == "table" then
+								local oldStyle = Element.Values.Style
 
-							for i, v in pairs(Element.Values) do
-								if NewElementSettings[i] == nil then
-									NewElementSettings[i] = v
-								end
-							end
-
-							ElementSettings = NewElementSettings
-							Index = NewIndex
-							Element.Values = ElementSettings
-
-							Set(Element.Values.CurrentValue)
-							local Success, Response = pcall(function()
-								Element.Values.Callback(Element.Values.CurrentValue)
-							end)
-
-							if not Success then
-								for _, ElementInstance in pairs(Instances) do
-									ElementInstance.Header.Text = "Callback Error"
-								end
-								warn(`Starlight Interface Suite - Callback Error | {Element.Values.Name} ({Index})`)
-								print(Response)
-								if WindowSettings.NotifyOnCallbackError then
-									Starlight:Notification({
-										Title = Element.Values.Name .. " Callback Error",
-										Content = tostring(Response),
-										Icon = 129398364168201,
-									})
-								end
-								wait(0.5)
-								for _, ElementInstance in pairs(Instances) do
-									ElementInstance.Header.Text = ElementSettings.Name
-								end
-							end
-
-							for i, ElementInstance in pairs(Instances) do
-								ElementInstance.Name = "TOGGLE_" .. Index
-								ElementInstance.Header.Text = Element.Values.Name
-								ElementInstance.Header.Icon.Visible = not String.IsEmptyOrNull(Element.Values.Icon)
-
-								if ElementInstance.Header.Icon.Visible == false then
-									ElementInstance.Header.UIPadding.PaddingLeft = UDim.new(0, 6)
-								else
-									ElementInstance.Header.UIPadding.PaddingLeft = UDim.new(0, 32)
-								end
-								ElementInstance.Header.Icon.Image = not String.IsEmptyOrNull(
-									Element.Values.Icon
-								)
-									and "rbxassetid://" .. Element.Values.Icon
-									or ""
-
-								if ElementInstance:FindFirstChild("Checkbox") then
-									if Element.Values.Style == 2 then
-										ElementInstance.Visible = false
-									else
-										ElementInstance.Visible = true
+								for i, v in pairs(Element.Values) do
+									if NewElementSettings[i] == nil then
+										NewElementSettings[i] = v
 									end
+								end
 
-									ElementInstance.Checkbox.Icon.Visible = true
-									ElementInstance.Checkbox.Icon.Image = Element.Values.CheckboxIcon ~= nil
-										and "rbxassetid://" .. Element.Values.CheckboxIcon
+								ElementSettings = NewElementSettings
+								Index = NewIndex
+								Element.Values = ElementSettings
+
+								Set(Element.Values.CurrentValue)
+								local Success, Response = pcall(function()
+									Element.Values.Callback(Element.Values.CurrentValue)
+								end)
+
+								if not Success then
+									for _, ElementInstance in pairs(Instances) do
+										ElementInstance.Header.Text = "Callback Error"
+									end
+									warn(`Starlight Interface Suite - Callback Error | {Element.Values.Name} ({Index})`)
+									print(Response)
+									if WindowSettings.NotifyOnCallbackError then
+										Starlight:Notification({
+											Title = Element.Values.Name .. " Callback Error",
+											Content = tostring(Response),
+											Icon = 129398364168201,
+										})
+									end
+									wait(0.5)
+									for _, ElementInstance in pairs(Instances) do
+										ElementInstance.Header.Text = ElementSettings.Name
+									end
+								end
+
+								for i, ElementInstance in pairs(Instances) do
+									ElementInstance.Name = "TOGGLE_" .. Index
+									ElementInstance.Header.Text = Element.Values.Name
+									ElementInstance.Header.Icon.Visible = not String.IsEmptyOrNull(Element.Values.Icon)
+
+									if ElementInstance.Header.Icon.Visible == false then
+										ElementInstance.Header.UIPadding.PaddingLeft = UDim.new(0, 6)
+									else
+										ElementInstance.Header.UIPadding.PaddingLeft = UDim.new(0, 32)
+									end
+									ElementInstance.Header.Icon.Image = not String.IsEmptyOrNull(
+										Element.Values.Icon
+									)
+										and "rbxassetid://" .. Element.Values.Icon
 										or ""
 
-									do
+									if ElementInstance:FindFirstChild("Checkbox") then
+										if Element.Values.Style == 2 then
+											ElementInstance.Visible = false
+										else
+											ElementInstance.Visible = true
+										end
+
+										ElementInstance.Checkbox.Icon.Visible = true
+										ElementInstance.Checkbox.Icon.Image = Element.Values.CheckboxIcon ~= nil
+											and "rbxassetid://" .. Element.Values.CheckboxIcon
+											or ""
+
+										do
+										end
+									elseif ElementInstance.Switch then
+										if Element.Values.Style == 1 then
+											ElementInstance.Visible = false
+										else
+											ElementInstance.Visible = true
+										end
 									end
-								elseif ElementInstance.Switch then
-									if Element.Values.Style == 1 then
-										ElementInstance.Visible = false
-									else
-										ElementInstance.Visible = true
-									end
+
+									tooltips[i].Text = Element.Values.Tooltip or ""
+
+									Element.Instance = ElementInstance.Visible and ElementInstance or Element.Instance
 								end
 
-								tooltips[i].Text = Element.Values.Tooltip or ""
-
-								Element.Instance = ElementInstance.Visible and ElementInstance or Element.Instance
-							end
-
-							for i, v in pairs(Element.NestedElements) do
-								if v.Class == "Bind" or v.Class == "ColorPicker" then
-									if v.Class == "Bind" then
-										v.Instance.Parent = Element.Instance.ElementContainer
+								for i, v in pairs(Element.NestedElements) do
+									if v.Class == "Bind" or v.Class == "ColorPicker" then
+										if v.Class == "Bind" then
+											v.Instance.Parent = Element.Instance.ElementContainer
+											continue
+										end
+										v.Instances[1].Parent = Element.Instance.ElementContainer
 										continue
 									end
-									v.Instances[1].Parent = Element.Instance.ElementContainer
-									continue
+									v.Instances[1].Parent = Element.Instance.DropdownHolder
 								end
-								v.Instances[1].Parent = Element.Instance.DropdownHolder
-							end
 
-							Starlight.Window.TabSections[Name].Tabs[TabIndex].Groupboxes[GroupIndex].Elements[Index].Values =
-								Element.Values
+								Starlight.Window.TabSections[Name].Tabs[TabIndex].Groupboxes[GroupIndex].Elements[Index].Values =
+									Element.Values
+							else
+								Set(NewElementSettings)
+								Starlight.Window.TabSections[Name].Tabs[TabIndex].Groupboxes[GroupIndex].Elements[Index].Values =
+									Element.Values
+							end
 						end
 					end)
 
@@ -7627,7 +7633,7 @@ function Starlight:CreateWindow(WindowSettings)
 
 											Starlight.Window.TabSections[Name].Tabs[TabIndex].Groupboxes[GroupIndex].Elements[ParentIndex].NestedElements[NestedIndex].Values =
 												NestedElement.Values
-											
+
 											for i, v in pairs(NestedElement.Values.Options) do
 												for _, optioninstance in pairs(NestedElement.Instances[2].List:GetChildren()) do
 													if optioninstance.Name == "OPTION_" .. v then
@@ -7635,7 +7641,7 @@ function Starlight:CreateWindow(WindowSettings)
 													end
 												end
 											end
-											
+
 											NestedElement.Instances[1].Header.Text =
 												Table.Unpack(NestedElement.Values.CurrentOption)
 											NestedElement.Instances[1].Header.PlaceholderText = NestedElement.Values.Placeholder
