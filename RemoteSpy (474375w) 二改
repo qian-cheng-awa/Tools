@@ -1491,37 +1491,11 @@ oldInvokeServer = hookfunction(getrawmetatable(game).__index(Instance.new("Remot
 	return oldInvokeServer(self, ...)
 end))
 
-local function GetFakeEvent(remote)
-	local FakeEvent = OnClientEventTBL[remote]
-	if not FakeEvent then
-		FakeEvent = Instance.new("BindableEvent")
-		remote.OnClientEvent:Connect(newcclosure(function(...)
-			hook(remote, "OnClientEvent", ...)
-			FakeEvent:Fire(...)
-		end))
-		
-		OnClientEventTBL[remote] = FakeEvent
-	end
-	return FakeEvent
-end
-
-oldIndex = hookmetamethod(game, "__index", function(self, key)
-	if not checkcaller() then
-		if typeof(key) == "string" and key:lower() == "onclientevent" and self:IsA("RemoteEvent") then
-			local FakeEvent = GetFakeEvent(self)
-
-			return FakeEvent.OnClientEvent
-		end
-	end
-	return oldIndex(self, key)
-end)
-
-
 local function NewRemoteFunction(RF,_function)
 	if not getcallbackmember or HookedClientInvokes[RF] then return end
 
 	local Func = _function or getcallbackmember(RF, "OnClientInvoke")
-	
+
 	if typeof(Func) ~= "function" then return end
 
 	HookedClientInvokes[RF] = {Func, function(...)
@@ -1532,6 +1506,56 @@ local function NewRemoteFunction(RF,_function)
 
 	RF.OnClientInvoke = HookedClientInvokes[RF][2]
 end
+
+local function GetFakeEvent(remote)
+	local FakeEvent = OnClientEventTBL[remote]
+	warn("FakeEvent ",FakeEvent)
+	if not FakeEvent then
+		FakeEvent = Instance.new("BindableEvent")
+		remote.OnClientEvent:Connect(function(...)
+			hook(remote, "OnClientEvent", ...)
+			FakeEvent:Fire(...)
+		end)
+
+		OnClientEventTBL[remote] = FakeEvent
+	end
+	return FakeEvent
+end
+
+local function ClearEvent(Event)
+	if Event:IsA("RemoteFunction") then NewRemoteFunction(Event) return end
+
+	if ClearedEvents[Event] then return end
+
+	if Event:IsA("RemoteEvent") then
+		for _,Connection in getconnections(Event.OnClientEvent) do
+			local _function = Connection.Function
+
+			Connection:Disable()
+
+			if _function then
+				local FakeEvent = GetFakeEvent(Event)
+
+				FakeEvent.Event:Connect(_function)
+			end
+		end
+		ClearedEvents[Event] = true
+	end
+end
+
+
+oldIndex = hookmetamethod(game, "__index", function(self, key)
+	if not checkcaller() then
+		if typeof(key) == "string" and key:lower() == "onclientevent" and self:IsA("RemoteEvent") then
+			ClearEvent(self)
+			
+			local FakeEvent = GetFakeEvent(self)
+
+			return FakeEvent.Event
+		end
+	end
+	return oldIndex(self, key)
+end)
 
 oldNewindex = hookmetamethod(game, "__newindex", function(self, key, value)
 	if not checkcaller() then
@@ -1551,26 +1575,6 @@ oldNewindex = hookmetamethod(game, "__newindex", function(self, key, value)
 	return oldNewindex(self, key, value)
 end)
 
-local function ClearEvent(Event)
-	if Event:IsA("RemoteFunction") then NewRemoteFunction(Event) return end
-	
-	if ClearedEvents[Event] then return end
-	
-	if Event:IsA("RemoteEvent") then
-		for _,Connection in getconnections(Event.OnClientEvent) do
-			local _function = Connection.Function
-
-			Connection:Disable()
-			
-			if _function then
-				local FakeEvent = GetFakeEvent(Event)
-
-				FakeEvent.Event:Connect(_function)
-			end
-		end
-		ClearedEvents[Event] = true
-	end
-end
 
 for i,v in getinstances() do
 	ClearEvent(v)
