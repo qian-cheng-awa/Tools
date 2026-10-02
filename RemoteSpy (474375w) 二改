@@ -1580,6 +1580,10 @@ for i,v in getinstances() do
 	ClearEvent(v)
 end
 
+for i,v in game:GetDescendants() do
+	ClearEvent(v)
+end
+
 game.DescendantAdded:Connect(function(Obj)
 	ClearEvent(Obj)
 end)
