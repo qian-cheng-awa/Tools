@@ -1518,6 +1518,8 @@ local function NewRemoteFunction(RF,_function)
 	if not getcallbackmember or HookedClientInvokes[RF] then return end
 
 	local Func = _function or getcallbackmember(RF, "OnClientInvoke")
+	
+	if typeof(Func) ~= "function" then return end
 
 	HookedClientInvokes[RF] = {Func, function(...)
 		hook(RF,"OnClientInvoke",...)
