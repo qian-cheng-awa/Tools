@@ -1494,6 +1494,7 @@ local function GetFakeEvent(remote)
 	if not FakeEvent then
 		FakeEvent = Instance.new("BindableEvent")
 		remote.OnClientEvent:Connect(newcclosure(function(...)
+			hook(remote, "OnClientEvent", ...)
 			FakeEvent:Fire(...)
 		end))
 		
