@@ -173,7 +173,7 @@ local StackDetailHandlers = {
 	}
 }
 
-local Cache, CurrentRaw, CurrentLogData, CurrentStackDetailRaw = {}, "", nil, ""
+local Cache, CurrentRaw, CurrentLogData, CurrentStackDetailRaw = setmetatable({}, {__mode = "k"}), "", nil, ""
 local CurrentTab, AutoSort, SortMode, SelectedBtn = "Args", true, "Time", nil
 local Screen, Sidebar, SidebarLayout, ContentArea, ArgsPage, StackPage, StackList, StackDetailLabel
 
@@ -201,19 +201,17 @@ function Utils.CleanName(name)
 	return name:gsub("\n", "\\n"):gsub("\t", "\\t"):gsub("\r", "")
 end
 
-function Utils.GetCallStack(startLevel)
+function Utils.GetCallStack()
 	local stack = {}
-	local level = startLevel or 10
-	while true do
+	for level = 1, 100 do
 		local ok, f = pcall(debug.info, level, "f")
 		if not ok or not f then break end
+		local src = debug.info(level, "s") or ""
 		local s, res = pcall(debug.getstack, level + 1)
 		table.insert(stack, {
 			Func = f,
 			Locals = s and (res or {}) or "你的注入器对 getstack 进行了限制，不能对 C 闭包使用"
 		})
-		level = level + 1
-		if level > 200 then break end
 	end
 	return stack
 end
@@ -467,15 +465,15 @@ function Utils.GenCode(remote, args, method)
 		code = "local args = {}"
 	else
 		code = `local args = {Utils.Serialize(args)}`
-		if args[1] == nil then
+		if args[1] == nil and #args > 0 then
 			code = code:gsub("local args = {", "local args = {\n    [1] = nil,", 1)
 		end
 	end
 	
 	if method == "OnClientInvoke" then
-		code = code .. `local getcallbackmember = getcallbackmember or getcallbackvalue\ngetcallbackmember({path},{method})(unpack(args))`
+		code = code .. `\n\nlocal getcallbackmember = getcallbackmember or getcallbackvalue\ngetcallbackmember({path},{method})(unpack(args))`
 	elseif method == "OnClientEvent" then
-		code = code .. `for i,v in getconnections({path}.{method}) do\n    if v.Function then v.Function(unpack(args)) end \nend`
+		code = code .. `\n\nfor i,v in getconnections({path}.{method}) do\n    if v.Function then v.Function(unpack(args)) end \nend`
 	else
 		code = code .. `\n\n{path}:{method}(unpack(args))`
 	end
@@ -1471,8 +1469,7 @@ local function hook(self, method, ...)
 end
 
 local oldNamecall, oldFireServer, oldInvokeServer, oldIndex, oldNewindex
-local oldEvent = Instance.new("BindableEvent")
-local OnClientEventTBL,ClearedEvents,HookedClientInvokes = {},{},{}
+local OnClientEventTBL,ClearedEvents,HookedClientInvokes = setmetatable({}, {__mode = "k"}),setmetatable({}, {__mode = "k"}),setmetatable({}, {__mode = "k"})
 
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
 	local method = getnamecallmethod()
@@ -1507,7 +1504,7 @@ end
 
 oldIndex = hookmetamethod(game, "__index", function(self, key)
 	if not checkcaller() then
-		if key:lower() == "onclientevent" and self:IsA("RemoteEvent") then
+		if typeof(key) == "string" and key:lower() == "onclientevent" and self:IsA("RemoteEvent") then
 			local FakeEvent = GetFakeEvent(self)
 
 			return FakeEvent.OnClientEvent
@@ -1533,7 +1530,7 @@ end
 
 oldNewindex = hookmetamethod(game, "__newindex", function(self, key, value)
 	if not checkcaller() then
-		if key:lower() == "onclientinvoke" and self:IsA("RemoteFunction") then
+		if typeof(key) == "string" and key:lower() == "onclientinvoke" and self:IsA("RemoteFunction") then
 			if typeof(value) == "function" then
 				local RFT = HookedClientInvokes[self]
 				
