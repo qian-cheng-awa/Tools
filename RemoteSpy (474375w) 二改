@@ -205,13 +205,15 @@ function Utils.GetCallStack()
 	local stack = {}
 	for level = 1, 100 do
 		local ok, f = pcall(debug.info, level, "f")
-		if not ok or not f then break end
-		local src = debug.info(level, "s") or ""
-		local s, res = pcall(debug.getstack, level + 1)
-		table.insert(stack, {
-			Func = f,
-			Locals = s and (res or {}) or "你的注入器对 getstack 进行了限制，不能对 C 闭包使用"
-		})
+		if not ok then break end
+		if f then
+			local src = debug.info(level, "s") or ""
+			local s, res = pcall(debug.getstack, level + 1)
+			table.insert(stack, {
+				Func = f,
+				Locals = s and (res or {}) or "你的注入器对 getstack 进行了限制，不能对 C 闭包使用"
+			})
+		end
 	end
 	return stack
 end
