@@ -20,6 +20,8 @@ local Config = {
 		Event = Color3.fromRGB(255, 198, 0),
 		Function = Color3.fromRGB(174, 98, 206),
 		Unreliable = Color3.fromRGB(209, 109, 0),
+		OnClientInvoke = Color3.fromRGB(255, 0, 221),
+		OnClientEvent = Color3.fromRGB(174, 255, 0),
 		TabActive = Color3.fromRGB(0, 122, 204),
 		TabInactive = Color3.fromRGB(45, 45, 48),
 		AutoOn = Color3.fromRGB(89, 194, 99),
@@ -183,6 +185,9 @@ local Services = {
 	CoreGui = (gethui and gethui()) or game:GetService("CoreGui"),
 	Http = game:GetService("HttpService")
 }
+
+
+local getcallbackmember = getcallbackmember or getcallbackvalue
 
 function Utils.Escape(text)
 	return text:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
@@ -457,16 +462,22 @@ end
 function Utils.GenCode(remote, args, method)
 	local path = Utils.GetPath(remote)
 	local code = ""
-
-	if #args == 1 and type(args[1]) == "table" and next(args[1]) == nil then
-		code = string.format("%s:%s({})", path, method)
-	elseif next(args) == nil then
-		code = string.format("%s:%s()", path, method)
+	
+	if next(args) == nil then
+		code = "local args = {}"
 	else
-		code = string.format("local args = %s\n\n%s:%s(unpack(args))", Utils.Serialize(args), path, method)
+		code = `local args = {Utils.Serialize(args)}`
 		if args[1] == nil then
 			code = code:gsub("local args = {", "local args = {\n    [1] = nil,", 1)
 		end
+	end
+	
+	if method == "OnClientInvoke" then
+		code = code .. `local getcallbackmember = getcallbackmember or getcallbackvalue\ngetcallbackmember({path},{method})(unpack(args))`
+	elseif method == "OnClientEvent" then
+		code = code .. `for i,v in getconnections({path}.{method}) do\n    if v.Function then v.Function(unpack(args)) end \nend`
+	else
+		code = code .. `\n\n{path}:{method}(unpack(args))`
 	end
 
 	return Lexer.Highlight(code), code
@@ -1124,9 +1135,23 @@ UI.CreateButtonGroup(ArgsPage, {
 		OnClick = function(b)
 			if CurrentLogData then
 				task.spawn(function()
-					local s, e = pcall(function()
-						return CurrentLogData.Remote[CurrentLogData.Method](CurrentLogData.Remote, unpack(CurrentLogData.Args))
-					end)
+					local s, e 
+					if CurrentLogData.Method == "OnClientInvoke" then
+						s, e = pcall(function()
+							getcallbackmember(CurrentLogData.Remote,"OnClientInvoke")(unpack(CurrentLogData.Args))
+						end)
+					elseif CurrentLogData.Method == "OnClientEvent" then
+						s, e = pcall(function()
+							for i,v in getconnections(CurrentLogData.Remote.OnClientEvent) do
+								v:Fire(unpack(CurrentLogData.Args))
+							end
+						end)
+					else
+						s, e = pcall(function()
+							return CurrentLogData.Remote[CurrentLogData.Method](CurrentLogData.Remote, unpack(CurrentLogData.Args))
+						end)
+					end
+					
 					if not s then warn("Execution failed:", e) end
 				end)
 				b.Text = "已发送"
@@ -1280,7 +1305,11 @@ local function CreateGroup(remote, method)
 		BorderSizePixel = 0
 	})
 
-	local TypeColor = (remote.ClassName == "RemoteFunction" and Config.Colors.Function) or (remote.ClassName == "UnreliableRemoteEvent" and Config.Colors.Unreliable) or Config.Colors.Event
+	local TypeColor = (remote.ClassName == "RemoteFunction" and Config.Colors.Function) or 
+		(remote.ClassName == "UnreliableRemoteEvent" and Config.Colors.Unreliable) or 
+		(method == "OnClientEvent" and Config.Colors.OnClientEvent) or
+		(method == "OnClientInvoke" and Config.Colors.OnClientInvoke) or
+		Config.Colors.Event
 
 	UI.Create("Frame", {
 		Size = UDim2.new(0, 4, 1, 0),
@@ -1487,7 +1516,6 @@ oldIndex = hookmetamethod(game, "__index", function(self, key)
 	return oldIndex(self, key)
 end)
 
-local getcallbackmember = getcallbackmember or getcallbackvalue
 
 local function NewRemoteFunction(RF,_function)
 	if not getcallbackmember or HookedClientInvokes[RF] then return end
