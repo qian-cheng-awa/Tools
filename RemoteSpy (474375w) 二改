@@ -1500,10 +1500,12 @@ local function NewRemoteFunction(RF,_function)
 	local Func = _function or getcallbackmember(RF, "OnClientInvoke")
 
 	if typeof(Func) ~= "function" then return end
-	
-	HookedClientInvokes[RF] = {Func,hookfunction(Func, function(...)
+	local old
+	old = hookfunction(Func, function(...)
 		hook(RF, "OnClientInvoke", ...)
-	end)}
+		return old(...)
+	end)
+	HookedClientInvokes[RF] = {Func,old}
 end
 
 oldNewindex = hookmetamethod(game, "__newindex", newcclosure(function(self, key, value)
