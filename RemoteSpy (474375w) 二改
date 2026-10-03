@@ -1437,24 +1437,7 @@ local function Log(remote, args, method, trace)
 	end
 end
 
---[[local bridge = coroutine.create(function() --roblox清理机制害的
-	while true do
-		local remote, args, method, trace = coroutine.yield()
-		task.spawn(Log, remote, args, method, trace)
-	end
-end)
-coroutine.resume(bridge)
-
-local function hook(self, method, ...)
-	if not checkcaller() then
-		local args = {...}
-		local trace = Utils.GetCallStack()
-		task.spawn(function()
-			setthreadidentity(8)
-			coroutine.resume(bridge, self, args, method, trace)
-		end)
-	end
-end]]
+local StringCache = {}
 
 local function hook(self, method, ...)
 	if method ~= "OnClientEvent" and method ~= "OnClientInvoke" and checkcaller() then
@@ -1463,6 +1446,19 @@ local function hook(self, method, ...)
 
 	local args = {...}
 	local trace = Utils.GetCallStack()
+	
+	if typeof(self) == "string" then
+		local Cached = StringCache[self]
+		if not Cached then
+			Cached = Instance.new("Folder")
+			Cached.Name = self
+			StringCache[self] = Cached
+			
+		end
+		
+		self = Cached
+	end
+	
 	task.spawn(function()
 		if setthreadidentity then
 			pcall(setthreadidentity, 8)
@@ -1470,7 +1466,6 @@ local function hook(self, method, ...)
 		Log(self, args, method, trace)
 	end)
 end
-
 local oldNamecall, oldFireServer, oldInvokeServer, oldIndex, oldNewindex
 local OnClientEventTBL,HookedClientInvokes = setmetatable({}, {__mode = "k"}),setmetatable({}, {__mode = "k"})
 
