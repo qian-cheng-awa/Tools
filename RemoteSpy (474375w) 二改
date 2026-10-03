@@ -1468,7 +1468,7 @@ return function(Custom)
 			local newname = self..method
 			local Cached = StringCache[newname]
 			if not Cached then
-				Cached = Instance.new(method == "InvokeServer" or method == "OnClientInvoke" and "RemoteFunction" or "RemoteEvent")
+				Cached = Instance.new((method == "InvokeServer" or method == "OnClientInvoke") and "RemoteFunction" or "RemoteEvent")
 				Cached.Name = self
 				StringCache[newname] = Cached
 
