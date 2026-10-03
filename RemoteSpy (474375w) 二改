@@ -1501,11 +1501,6 @@ local function NewRemoteFunction(RF,_function)
 
 	if typeof(Func) ~= "function" then return end
 	
-	local old = HookedClientInvokes[RF]
-	if old then
-		hookfunction(old[1],old[2])
-	end
-	
 	HookedClientInvokes[RF] = {Func,hookfunction(Func, function(...)
 		hook(RF, "OnClientInvoke", ...)
 	end)}
@@ -1515,6 +1510,12 @@ oldNewindex = hookmetamethod(game, "__newindex", newcclosure(function(self, key,
 	if not checkcaller() then
 		if typeof(key) == "string" and key:lower() == "onclientinvoke" and self:IsA("RemoteFunction") then
 			if typeof(value) == "function" then
+				local old = HookedClientInvokes[self]
+				
+				if old and old[1] ~= value and old[2] ~= value then
+					hookfunction(old[1],old[2])
+				end
+				
 				NewRemoteFunction(self, value)
 			end
 		end
