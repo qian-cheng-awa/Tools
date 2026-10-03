@@ -1563,5 +1563,5 @@ return function(Custom)
 		end)
 	end
 	
-	return {hook}
+	return {hook = hook}
 end
