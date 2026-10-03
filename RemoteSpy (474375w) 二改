@@ -1,4 +1,7 @@
 return function(Custom)
+	if Custom and typeof(Custom) ~= "table" then
+		Custom = {}
+	end
 	local Utils = {}
 	local Lexer = {}
 	local UI = {}
@@ -458,11 +461,9 @@ return function(Custom)
 			return string.format("nil --[[ %s ]]", typeof(v))
 		end
 	end
-
-	function Utils.GenCode(remote, args, method)
-		local path = Utils.GetPath(remote)
+	
+	function Utils.Args(args)
 		local code = ""
-
 		if next(args) == nil then
 			code = "local args = {}"
 		else
@@ -471,7 +472,20 @@ return function(Custom)
 				code = code:gsub("local args = {", "local args = {\n    [1] = nil,", 1)
 			end
 		end
-
+	end
+	
+	function Utils.GenCode(remote, args, method)
+		
+		if Custom and Custom.GenCode then
+			local newcode = Custom.GenCode(remote, args, method, Utils.Args)
+			if newcode then
+				return Lexer.Highlight(newcode), newcode
+			end
+		end
+		
+		local path = Utils.GetPath(remote)
+		local code = Utils.Args(args)
+		
 		if method == "OnClientInvoke" then
 			code = code .. `\n\nlocal getcallbackmember = getcallbackmember or getcallbackvalue\ngetcallbackmember({path},{method})(unpack(args))`
 		elseif method == "OnClientEvent" then
@@ -1547,5 +1561,5 @@ return function(Custom)
 		end)
 	end
 	
-	return hook
+	return {hook}
 end
