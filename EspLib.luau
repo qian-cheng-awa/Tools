@@ -149,9 +149,9 @@ Template.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 
 function EspLib:WrapObject(Args)
 	if EspLib.Objects[Args.Object] then return end
-	
+
 	Args.Configs = Args.Configs or {}
-	
+
 	if Args.Color then
 		if typeof(Args.Color) == "table" then
 			Args.Color = {
@@ -170,7 +170,7 @@ function EspLib:WrapObject(Args)
 			Box = Color3.fromRGB(255, 255, 255),
 		}
 	end
-	
+
 	if not Args.Object then return end
 	Args = {
 		Object = Args.Object,
@@ -204,11 +204,13 @@ function EspLib:WrapObject(Args)
 			local HealthDisplay = NewUi.Box.HealthDisplay
 
 			local function Update()
-				local Health = Humanoid.Health
-				local MaxHealth = Humanoid.MaxHealth
+				if HealthBar and HealthBar:FindFirstChild("Frame") then
+					local Health = Humanoid.Health
+					local MaxHealth = Humanoid.MaxHealth
 
-				HealthDisplay.Text = `{math.floor(Health*10)/10}/{math.floor(MaxHealth*10)/10}`
-				HealthBar.Frame.Size = UDim2.fromScale(Health/MaxHealth,1)
+					HealthDisplay.Text = `{math.floor(Health*10)/10}/{math.floor(MaxHealth*10)/10}`
+					HealthBar.Frame.Size = UDim2.fromScale(Health/MaxHealth,1)
+				end
 			end
 
 			Update()
@@ -304,7 +306,7 @@ function EspLib:WrapObject(Args)
 	Object.Destroying:Once(function()
 		EspLib:UnwrapObject(Object)
 	end)
-	
+
 	local a;a = Object.AncestryChanged:Connect(function()
 		if not Object:IsDescendantOf(workspace) then
 			a:Disconnect()
