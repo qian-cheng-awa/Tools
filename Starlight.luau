@@ -1387,13 +1387,15 @@ local function closeAllPopups()
 			pcall(closeFn)
 		end
 	end
-	for _, popup in ipairs(StarlightUI.PopupOverlay:GetChildren()) do
-		if popup.Visible then
-			popup.Visible = false
+	local instance = Starlight.Instance
+	if instance and instance:FindFirstChild("PopupOverlay") then
+		for _, popup in ipairs(instance.PopupOverlay:GetChildren()) do
+			if popup.Visible then
+				popup.Visible = false
+			end
 		end
 	end
 end
-
 local function Hide(Interface, JustHide: boolean?, Notify: boolean?, Bind: string?)
 	JustHide = JustHide or false
 
@@ -1755,6 +1757,7 @@ until buildAttempts >= 2
 
 StarlightUI.Name = (((getgenv and getgenv().InterfaceName) or StarlightUI.Name) or "Starlight Interface Suite")
 Starlight.Instance = StarlightUI
+
 StarlightUI.Enabled = false
 if not isStudio then
 	pcall(function()
