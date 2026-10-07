@@ -122,14 +122,7 @@ local MarketplaceService = GetService("MarketplaceService")
 local ReplicatedStorage = GetService("ReplicatedStorage")
 local ContentProvider = GetService("ContentProvider")
 local CoreGui = GetService("CoreGui")
-local InputManager
-
 local getgenv = getgenv or function() return _G end
-
-if not getgenv().SecureMode then
-	InputManager = GetService("VirtualInputManager")
-end
-
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 local Camera = workspace.CurrentCamera
@@ -1374,378 +1367,81 @@ function String.IsEmptyOrNull(str: string)
 end
 
 --// SUBSECTION : Window Methods
-
--- this is a way to allow for tweening cus roblox doesnt have opacity yet and my lazy ass is not gonna be able to set each and every value without crashing out - also this makes it extremely future/change proof
--- Table for Transparency Values Of All Instances
-local TransparencyValues = {
-	["TEMPLATE"] = {
-		BackgroundTransparency = nil,
-		TextTransparency = nil,
-		Transparency = nil,
-		ImageTransparency = nil,
-	},
-}
--- sometimes it breaks for no reason, so just throw nothing if it does to prevent errors
-setmetatable(TransparencyValues, {
-	__index = function()
-		return
-	end,
-})
-
 local oldSizeX, oldSizeY, oldPosX, oldPosY
 
 -- Hides the given object
+-- 关闭弹窗（替代 InputManager）
+local popupClosers = {}
+
+local function registerPopupCloser(popup, closeFn)
+	popupClosers[popup] = closeFn
+end
+
+local function unregisterPopupCloser(popup)
+	popupClosers[popup] = nil
+end
+
+local function closeAllPopups()
+	for popup, closeFn in pairs(popupClosers) do
+		if popup and popup.Parent then
+			pcall(closeFn)
+		end
+	end
+	for _, popup in ipairs(StarlightUI.PopupOverlay:GetChildren()) do
+		if popup.Visible then
+			popup.Visible = false
+		end
+	end
+end
+
 local function Hide(Interface, JustHide: boolean?, Notify: boolean?, Bind: string?)
 	JustHide = JustHide or false
 
-	TransparencyValues[Interface.Name] = TransparencyValues[Interface.Name] or {}
-	-- Clear Table
-	table.clear(TransparencyValues[Interface.Name])
+	-- 关闭弹窗
+	closeAllPopups()
 
-	for i, v in pairs(Interface:GetDescendants()) do
-		if
-			v.ClassName ~= "Folder"
-			and v.ClassName ~= "UICorner"
-			and v.ClassName ~= "StringValue"
-			and v.ClassName ~= "Color3Value"
-			and v.ClassName ~= "UIListLayout"
-			and v.ClassName ~= "UITextSizeConstraint"
-			and v.ClassName ~= "UIPadding"
-			and v.ClassName ~= "UIPageLayout"
-			and v.ClassName ~= "UISizeConstraint"
-			and v.ClassName ~= "UIAspectRatioConstraint"
-		then
-			-- Create And Set Subtables
-			if JustHide == false then
-				v:SetAttribute("InstanceID", HttpService:GenerateGUID(false)) -- we are doing this cus roblox fucking removed/disabled the UniqueId feature, and stuff might have the same name
-
-				TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")] = {}
-
-				if v.ClassName == "Frame" then
-					TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].BackgroundTransparency =
-						v.BackgroundTransparency
-				end
-
-				if v.ClassName == "TextLabel" or v.ClassName == "TextBox" or v.ClassName == "TextButton" then
-					TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].BackgroundTransparency =
-						v.BackgroundTransparency
-					TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].TextTransparency =
-						v.TextTransparency
-				end
-
-				if v.ClassName == "ImageLabel" or v.ClassName == "ImageButton" then
-					TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].BackgroundTransparency =
-						v.BackgroundTransparency
-					TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].ImageTransparency =
-						v.ImageTransparency
-				end
-
-				-- do this cus roblox gui stuff have a although deprecated class, its still accesible by scripts
-				-- and sets text and transparency values which is smth we dont want
-				if v.ClassName == "UIStroke" or v.ClassName == "UIGradient" then
-					TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].Transparency = v.Transparency
-				end
-			end
-
-			-- Actually Hide The Stuff
-			if v.ClassName == "Frame" then
-				Tween(v, { BackgroundTransparency = 1 })
-			end
-
-			if v.ClassName == "TextLabel" or v.ClassName == "TextBox" or v.ClassName == "TextButton" then
-				Tween(v, { BackgroundTransparency = 1 })
-				Tween(v, { TextTransparency = 1 })
-			end
-
-			if v.ClassName == "ImageLabel" or v.ClassName == "ImageButton" then
-				Tween(v, { BackgroundTransparency = 1 })
-				Tween(v, { ImageTransparency = 1 })
-			end
-
-			if v.ClassName == "UIStroke" or Interface.ClassName == "UIGradient" then
-				Tween(v, { Transparency = 1 })
-			end
-		end
-	end
-
-	if Interface.ClassName ~= "ScreenGui" then
-		if JustHide == false then
-			Interface:SetAttribute("InstanceID", HttpService:GenerateGUID(false)) -- we are doing this cus roblox fucking removed/disabled the UniqueId feature, and stuff might have the same name
-
-			TransparencyValues[Interface.Name][Interface:GetAttribute("InstanceID")] = {}
-
-			if Interface.ClassName == "Frame" then
-				TransparencyValues[Interface.Name][Interface:GetAttribute("InstanceID")].BackgroundTransparency =
-					Interface.BackgroundTransparency
-			end
-
-			if
-				Interface.ClassName == "TextLabel"
-				or Interface.ClassName == "TextBox"
-				or Interface.ClassName == "TextButton"
-			then
-				TransparencyValues[Interface.Name][Interface:GetAttribute("InstanceID")].BackgroundTransparency =
-					Interface.BackgroundTransparency
-				TransparencyValues[Interface.Name][Interface:GetAttribute("InstanceID")].TextTransparency =
-					Interface.TextTransparency
-			end
-
-			if Interface.ClassName == "ImageLabel" or Interface.ClassName == "ImageButton" then
-				TransparencyValues[Interface.Name][Interface:GetAttribute("InstanceID")].BackgroundTransparency =
-					Interface.BackgroundTransparency
-				TransparencyValues[Interface.Name][Interface:GetAttribute("InstanceID")].ImageTransparency =
-					Interface.ImageTransparency
-			end
-
-			-- do this cus roblox gui stuff have a although deprecated class, its still accesible by scripts
-			-- and sets text and transparency values which is smth we dont want
-			if Interface.ClassName == "UIStroke" or Interface.ClassName == "UIGradient" then
-				TransparencyValues[Interface.Name][Interface:GetAttribute("InstanceID")].Transparency =
-					Interface.Transparency
-			end
-		end
-
-		-- Actually Hide The Stuff
-		if Interface.ClassName == "Frame" then
-			Tween(Interface, { BackgroundTransparency = 1 })
-		end
-
-		if
-			Interface.ClassName == "TextLabel"
-			or Interface.ClassName == "TextBox"
-			or Interface.ClassName == "TextButton"
-		then
-			Tween(Interface, { BackgroundTransparency = 1 })
-			Tween(Interface, { TextTransparency = 1 })
-		end
-
-		if Interface.ClassName == "ImageLabel" or Interface.ClassName == "ImageButton" then
-			Tween(Interface, { BackgroundTransparency = 1 })
-			Tween(Interface, { ImageTransparency = 1 })
-		end
-
-		if Interface.ClassName == "UIStroke" or Interface.ClassName == "UIGradient" then
-			Tween(Interface, { Transparency = 1 })
-		end
-	end
-
-	-- hide popups
-	if InputManager then
-		if not isStudio and Starlight.Instance.MobileToggle.Visible then
-			InputManager:SendTouchEvent(
-				0, 0, 0, 0
-			)
-
-			InputManager:SendTouchEvent(
-				0, 2, 0, 0
-			)
-		elseif not isStudio then
-			InputManager:SendMouseButtonEvent(
-				0, 0, 0, true, game, 0
-			)
-
-			InputManager:SendMouseButtonEvent(
-				0, 0, 0, false, game, 0
-			)
-		end
-	end
-
-	task.wait(0.18)
+	-- 直接隐藏，无动画
 	if Interface.ClassName == "ScreenGui" then
 		Interface.Enabled = false
 	else
 		Interface.Visible = false
 	end
 
+	Starlight.Minimized = true
+
 	if Notify then
 		if Starlight.Instance.MobileToggle.Visible then
 			Starlight:Notification({
 				Title = "Interface Hidden",
 				Icon = 87575513726659,
-				Content = "The Interface Has Been Hidden. You May Reopen It By Pressing The Small Icon Button. ",
+				Content = "The Interface Has Been Hidden. You May Reopen It By Pressing The Small Icon Button.",
 				Duration = 2,
 			})
 		else
 			Starlight:Notification({
 				Title = "Interface Hidden",
 				Icon = 87575513726659,
-				Content = "The Interface Has Been Hidden. You May Reopen It By Pressing The " .. Bind .. " Key.  ",
+				Content = "The Interface Has Been Hidden. You May Reopen It By Pressing The " .. (Bind or "K") .. " Key.",
 				Duration = 2,
 			})
 		end
 	end
-
-	Starlight.Minimized = true
 end
 
-local function GetRandomId()
-	return HttpService:GenerateGUID()
-end
--- Unhides the given object which has been hidden by hide
 local function Unhide(Interface)
 	if Interface.ClassName == "ScreenGui" then
 		Interface.Enabled = true
 	else
 		Interface.Visible = true
 	end
-
-	for i, v in pairs(Interface:GetDescendants()) do
-		if
-			v.ClassName ~= "Folder"
-			and v.ClassName ~= "UICorner"
-			and v.ClassName ~= "StringValue"
-			and v.ClassName ~= "Color3Value"
-			and v.ClassName ~= "UIListLayout"
-			and v.ClassName ~= "UITextSizeConstraint"
-			and v.ClassName ~= "UIPadding"
-			and v.ClassName ~= "UIPageLayout"
-			and v.ClassName ~= "UISizeConstraint"
-			and v.ClassName ~= "UIAspectRatioConstraint"
-		then
-			pcall(function()
-				if
-					(v.ClassName == "Frame")
-					and TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].BackgroundTransparency
-					~= nil
-				then
-					Tween(
-						v,
-						{
-							BackgroundTransparency = TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].BackgroundTransparency,
-						}
-					)
-				end
-
-				if
-					(v.ClassName == "TextLabel" or v.ClassName == "TextBox" or v.ClassName == "TextButton")
-					and TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].BackgroundTransparency ~= nil
-					and TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].TextTransparency ~= nil
-				then
-					Tween(
-						v,
-						{
-							BackgroundTransparency = TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].BackgroundTransparency,
-						}
-					)
-					Tween(
-						v,
-						{
-							TextTransparency = TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].TextTransparency,
-						}
-					)
-				end
-
-				if
-					(v.ClassName == "ImageLabel" or v.ClassName == "ImageButton")
-					and TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].BackgroundTransparency ~= nil
-					and TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].ImageTransparency
-				then
-					Tween(
-						v,
-						{
-							BackgroundTransparency = TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].BackgroundTransparency,
-						}
-					)
-					Tween(
-						v,
-						{
-							ImageTransparency = TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].ImageTransparency,
-						}
-					)
-				end
-
-				if
-					(v.ClassName == "UIStroke" or Interface.ClassName == "UIGradient")
-					and TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].Transparency
-				then
-					Tween(
-						v,
-						{ Transparency = TransparencyValues[Interface.Name][v:GetAttribute("InstanceID")].Transparency }
-					)
-				end
-			end)
-		end
-	end
-
-	pcall(function()
-		if Interface.ClassName ~= "ScreenGui" then
-			if
-				(Interface.ClassName == "Frame")
-				and TransparencyValues[Interface.Name][Interface:GetAttribute("InstanceID")].BackgroundTransparency
-				~= nil
-			then
-				Tween(
-					Interface,
-					{
-						BackgroundTransparency = TransparencyValues[Interface.Name][Interface:GetAttribute(
-							"InstanceID"
-						)].BackgroundTransparency,
-					}
-				)
-			end
-
-			if
-				(
-					Interface.ClassName == "TextLabel"
-						or Interface.ClassName == "TextBox"
-						or Interface.ClassName == "TextButton"
-				)
-					and TransparencyValues[Interface.Name][Interface:GetAttribute("InstanceID")].BackgroundTransparency ~= nil
-					and TransparencyValues[Interface.Name][Interface:GetAttribute("InstanceID")].TextTransparency ~= nil
-			then
-				Tween(
-					Interface,
-					{
-						BackgroundTransparency = TransparencyValues[Interface.Name][Interface:GetAttribute(
-							"InstanceID"
-						)].BackgroundTransparency,
-					}
-				)
-				Tween(
-					Interface,
-					{
-						TextTransparency = TransparencyValues[Interface.Name][Interface:GetAttribute("InstanceID")].TextTransparency,
-					}
-				)
-			end
-
-			if
-				(Interface.ClassName == "ImageLabel" or Interface.ClassName == "ImageButton")
-				and TransparencyValues[Interface.Name][Interface:GetAttribute("InstanceID")].BackgroundTransparency ~= nil
-				and TransparencyValues[Interface.Name][Interface:GetAttribute("InstanceID")].ImageTransparency
-			then
-				Tween(
-					Interface,
-					{
-						BackgroundTransparency = TransparencyValues[Interface.Name][Interface:GetAttribute(
-							"InstanceID"
-						)].BackgroundTransparency,
-					}
-				)
-				Tween(
-					Interface,
-					{
-						ImageTransparency = TransparencyValues[Interface.Name][Interface:GetAttribute("InstanceID")].ImageTransparency,
-					}
-				)
-			end
-
-			if
-				(Interface.ClassName == "UIStroke" or Interface.ClassName == "UIGradient")
-				and TransparencyValues[Interface.Name][Interface:GetAttribute("InstanceID")].Transparency
-			then
-				Tween(
-					Interface,
-					{
-						Transparency = TransparencyValues[Interface.Name][Interface:GetAttribute("InstanceID")].Transparency,
-					}
-				)
-			end
-		end
-	end)
-
 	Starlight.Minimized = false
 end
+
+
+local function GetRandomId()
+	return HttpService:GenerateGUID()
+end
+
 
 -- Maximizes the window
 local function Maximize(Window: Frame)
@@ -6366,7 +6062,8 @@ function Starlight:CreateWindow(WindowSettings)
 								NestedElement.Instances[2].Container.Color.OldColor.Frame.BackgroundTransparency = NestedElement.Values.Transparency
 									or 0
 							end
-
+							
+							registerPopupCloser(NestedElement.Instances[2], close)
 							NestedElement.Instances[1]:GetPropertyChangedSignal("AbsolutePosition"):Connect(close)
 
 							NestedElement.Instances[1].Interact.MouseButton1Click:Connect(function()
@@ -7184,6 +6881,7 @@ function Starlight:CreateWindow(WindowSettings)
 							end
 
 							function NestedElement:Destroy()
+								unregisterPopupCloser(NestedElement.Instances[2])
 								NestedElement.Instances[1]:Destroy()
 								NestedElement.Instances[2]:Destroy()
 								NestedElement = nil
@@ -7333,6 +7031,9 @@ function Starlight:CreateWindow(WindowSettings)
 									Tween.Info(nil, nil, 0.18)
 								)
 							end
+
+							registerPopupCloser(NestedElement.Instances[2], close)
+
 							NestedElement.Instances[1]:GetPropertyChangedSignal("AbsolutePosition"):Connect(close)
 							NestedElement.Instances[1]:GetPropertyChangedSignal("AbsolutePosition"):Connect(updPos)
 							updPos()
@@ -7768,6 +7469,7 @@ function Starlight:CreateWindow(WindowSettings)
 							)
 
 							function NestedElement:Destroy()
+								unregisterPopupCloser(NestedElement.Instances[2])
 								NestedElement.Instances[1]:Destroy()
 								NestedElement.Instances[2]:Destroy()
 								Parent.Instance.Size = UDim2.fromOffset(0, Parent.Instance.Size.Y.Offset - additionSize)
