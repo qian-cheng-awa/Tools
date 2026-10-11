@@ -8,6 +8,11 @@ if gethui then
 	GuiMain = gethui()
 elseif game.CoreGui then
 	GuiMain = game.CoreGui
+else
+	GuiMain = Instance.new("ScreenGui",Player.PlayerGui)
+	GuiMain.Name = "Esp"
+	GuiMain.ResetOnSpawn = false
+	GuiMain.IgnoreGuiInset = true
 end
 
 if GuiMain:FindFirstChild("Bi_Xie Esp") then
@@ -147,6 +152,53 @@ Template.TextSize = 14
 Template.TextScaled = true
 Template.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 
+function GetOnScreenSize(model:Model?)
+	local camera = workspace.CurrentCamera
+	
+	local cf, size
+	if model:IsA("Model") then
+		cf, size = model:GetPivot(), model:GetExtentsSize()
+	elseif model:IsA("BasePart") then
+		cf, size = model.CFrame, model.Size
+	else
+		return Vector2.zero, false
+	end
+
+	local half = size * 0.5
+
+	local corners = {
+		cf * CFrame.new(-half.X, -half.Y, -half.Z),
+		cf * CFrame.new( half.X, -half.Y, -half.Z),
+		cf * CFrame.new(-half.X,  half.Y, -half.Z),
+		cf * CFrame.new( half.X,  half.Y, -half.Z),
+		cf * CFrame.new(-half.X, -half.Y,  half.Z),
+		cf * CFrame.new( half.X, -half.Y,  half.Z),
+		cf * CFrame.new(-half.X,  half.Y,  half.Z),
+		cf * CFrame.new( half.X,  half.Y,  half.Z),
+	}
+
+	local minX, minY = math.huge, math.huge
+	local maxX, maxY = -math.huge, -math.huge
+	
+	local anyBehind = false
+
+	for _, worldPos in ipairs(corners) do
+
+		local screenPos, onScreen = camera:WorldToScreenPoint(worldPos.Position)
+		
+		if screenPos.Z <= 0 then
+			anyBehind = true
+		end
+		
+		minX = math.min(minX, screenPos.X)
+		minY = math.min(minY, screenPos.Y)
+		maxX = math.max(maxX, screenPos.X)
+		maxY = math.max(maxY, screenPos.Y)
+	end
+	
+	return UDim2.fromOffset(maxX - minX, maxY - minY)
+end
+
 function EspLib:WrapObject(Args)
 	if EspLib.Objects[Args.Object] then return end
 
@@ -189,11 +241,10 @@ function EspLib:WrapObject(Args)
 	NewUi.Box.UIStroke.Enabled = Args.Configs.Box
 
 	local Object = Args.Object
-
+	
+	NewUi.Size = GetOnScreenSize(Object)+UDim2.fromOffset(300,200)
+	
 	if Object:IsA("Model") then
-		local Position,Size = Object:GetBoundingBox()
-		NewUi.Size = UDim2.new(math.max(Size.X,Size.Z),300,Size.Y,200)
-
 		if not Object:FindFirstChild("Humanoid") or not Args.Configs.HealthBar then
 			NewUi.Box.HealthBar:Destroy()
 			NewUi.Box.HealthDisplay:Destroy()
@@ -218,8 +269,6 @@ function EspLib:WrapObject(Args)
 			Humanoid:GetPropertyChangedSignal("Health"):Connect(Update)
 			Humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(Update)
 		end
-	elseif Object:IsA("BasePart") then
-		NewUi.Size = UDim2.new(math.max(Object.Size.X,Object.Size.Z),300,Object.Size.Y,200)
 	end
 
 	local TBL = {Ui = NewUi,Connections = {}}
@@ -348,5 +397,13 @@ function EspLib:UnwrapObject(Object)
 
 	EspLib.Objects[Object] = nil
 end
+
+game:GetService("RunService").RenderStepped:Connect(function(dt)
+	for i,v in EspLib.Objects do
+		if v.Ui then
+			v.Ui.Size = GetOnScreenSize(i) + UDim2.fromOffset(300,200)
+		end
+	end
+end)
 
 return EspLib
