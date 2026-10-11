@@ -179,21 +179,23 @@ function GetOnScreenSize(model:Model?)
 
 	local minX, minY = math.huge, math.huge
 	local maxX, maxY = -math.huge, -math.huge
-	
-	local anyBehind = false
 
 	for _, worldPos in ipairs(corners) do
 
 		local screenPos, onScreen = camera:WorldToScreenPoint(worldPos.Position)
 		
 		if screenPos.Z <= 0 then
-			anyBehind = true
+			continue
 		end
 		
 		minX = math.min(minX, screenPos.X)
 		minY = math.min(minY, screenPos.Y)
 		maxX = math.max(maxX, screenPos.X)
 		maxY = math.max(maxY, screenPos.Y)
+	end
+	
+	if minX == math.huge then
+		return UDim2.fromOffset(0, 0)
 	end
 	
 	return UDim2.fromOffset(maxX - minX, maxY - minY)
