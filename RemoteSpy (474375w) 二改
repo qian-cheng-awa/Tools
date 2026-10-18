@@ -1491,12 +1491,13 @@ return function(Custom)
 
 		local IsA = game.IsA
 		
-		local NewNamecall = newcclosure(function(self, ...)
+		local NewNamecall = newcclosure(function(...)
+			local self = (...)
 			local method = getnamecallmethod()
-			if method and (IsA(self,"RemoteEvent") or IsA(self,"RemoteFunction") or IsA(self,"UnreliableRemoteEvent")) and (string.lower(method) == "fireserver" or string.lower(method) == "invokeserver") then
-				hook(self, method, ...)
+			if self and method and (string.lower(method) == "fireserver" or string.lower(method) == "invokeserver") and (IsA(self,"RemoteEvent") or IsA(self,"RemoteFunction") or IsA(self,"UnreliableRemoteEvent")) then
+				hook(self, method, select(2,...))
 			end
-			return oldNamecall(self, ...)
+			return oldNamecall(...)
 		end)
 
 		oldNamecall = hookmetamethod(game, "__namecall", clonefunction(NewNamecall))
@@ -1525,8 +1526,12 @@ return function(Custom)
 			HookedClientInvokes[RF] = {Func,old}
 		end
 
-		oldNewindex = hookmetamethod(game, "__newindex", newcclosure(function(self, key, value)
-			if not checkcaller() then
+		oldNewindex = hookmetamethod(game, "__newindex", newcclosure(function(...)
+			local args = {...}
+			local self = args[1]
+			local key = args[2]
+			local value = args[3]
+			if not checkcaller() and self and key and value then
 				if typeof(key) == "string" and key:lower() == "onclientinvoke" and self:IsA("RemoteFunction") then
 					if typeof(value) == "function" then
 						local old = HookedClientInvokes[self]
@@ -1540,7 +1545,7 @@ return function(Custom)
 				end
 			end
 
-			return oldNewindex(self, key, value)
+			return oldNewindex(...)
 		end))
 
 		local function NewRemoteEvent(Obj)
