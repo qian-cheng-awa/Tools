@@ -1490,25 +1490,23 @@ return function(Custom)
 		local OnClientEventTBL,HookedClientInvokes = setmetatable({}, {__mode = "k"}),setmetatable({}, {__mode = "k"})
 
 		local IsA = game.IsA
-
+		
 		oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(...)
-			local self = (...)
 			local method = getnamecallmethod()
-			if	method and 
-				(
-					string.lower(method) == "fireserver" or 
-						string.lower(method) == "invokeserver"
-				) and
-					typeof(self) == "Instance"
-					and 
-					(
-						IsA(self,"RemoteEvent") or 
-						IsA(self,"RemoteFunction") or 
-						IsA(self,"UnreliableRemoteEvent")
-					) 
-			then
-				hook(self, method, select(2,...))
+			if not (method == "FireServer" or method == "fireServer"
+				or method == "InvokeServer" or method == "invokeServer") then
+				return oldNamecall(...)
 			end
+
+			local self = (...)
+			if typeof(self) ~= "Instance" then
+				return oldNamecall(...)
+			end
+
+			if IsA(self, "RemoteEvent") or IsA(self, "RemoteFunction") or IsA(self, "UnreliableRemoteEvent") then
+				hook(self, method, select(2, ...))
+			end
+
 			return oldNamecall(...)
 		end))
 
