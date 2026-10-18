@@ -335,6 +335,8 @@ function EspLib:WrapObject(Args)
 			Config = v,
 			Cache = {},
 			lastText = nil,
+			fallbackLabel = nil,
+			isChinese = false,
 		}
 	end
 
@@ -373,6 +375,9 @@ function EspLib:UnwrapObject(Object)
 	if not Object then return false end
 	local obj = EspLib.Objects[Object]
 	if not obj then return false end
+	
+	obj.destroyed = true
+	EspLib.Objects[Object] = nil
 
 	if obj.DestroyingConn then obj.DestroyingConn:Disconnect() end
 	if obj.AncestryConn then obj.AncestryConn:Disconnect() end
@@ -386,7 +391,6 @@ function EspLib:UnwrapObject(Object)
 
 	DestroyDrawings(obj.Drawings)
 
-	EspLib.Objects[Object] = nil
 	return true
 end
 
@@ -396,6 +400,9 @@ RunService.RenderStepped:Connect(function()
 	local camPos = Camera.CFrame.Position
 
 	for Object, TBL in pairs(EspLib.Objects) do
+		if TBL.destroyed or EspLib.Objects[Object] ~= TBL then
+			continue
+		end
 		local d = TBL.Drawings
 		local cache = TBL.Cache
 
@@ -553,15 +560,39 @@ RunService.RenderStepped:Connect(function()
 			local item = TBL.infoDrawings[i]
 			local v = item.Config
 			local txt = tostring(GetVal(v.Text, Object) or "")
-			local col = GetVal(v.Color, Object)
+			local col = GetVal(v.Color, Object) or C3(220, 220, 220)
 			local drawing = item.Drawing
-			drawing.Visible = true
-			drawing.Color = col or C3(220, 220, 220)
-			drawing.Position = V2(x + w + 6, infoY)
-			if item.lastText ~= txt then
-				item.lastText = txt
-				drawing.Text = txt
+			local isCN = hasNonASCII(txt)
+
+			if isCN then
+				drawing.Visible = false
+				if not item.fallbackLabel then
+					item.fallbackLabel = createFallbackLabel()
+				end
+				local lbl = item.fallbackLabel
+				lbl.Text = txt
+				lbl.TextColor3 = col
+				local sp, onScreen = Camera:WorldToScreenPoint(objPos)
+				if onScreen and sp.Z > 0 then
+					lbl.Position = UDim2.fromOffset(x + w + 6, infoY)
+					lbl.Visible = true
+				else
+					lbl.Visible = false
+				end
+			else
+				if item.fallbackLabel then
+					item.fallbackLabel.Visible = false
+				end
+				drawing.Visible = true
+				drawing.Color = col
+				drawing.Position = V2(x + w + 6, infoY)
+				if item.lastText ~= txt then
+					item.lastText = txt
+					drawing.Text = txt
+				end
 			end
+
+			item.isChinese = isCN
 			infoY = infoY + 14
 		end
 
