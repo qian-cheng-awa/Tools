@@ -375,7 +375,7 @@ function EspLib:UnwrapObject(Object)
 	if not Object then return false end
 	local obj = EspLib.Objects[Object]
 	if not obj then return false end
-	
+
 	obj.destroyed = true
 	EspLib.Objects[Object] = nil
 
@@ -389,11 +389,19 @@ function EspLib:UnwrapObject(Object)
 		obj.fallbackLabel:Destroy()
 	end
 
+	-- 清理 infos 的 fallbackLabel
+	for i = 1, #obj.infoDrawings do
+		local item = obj.infoDrawings[i]
+		if item.fallbackLabel then
+			item.fallbackLabel:Destroy()
+			item.fallbackLabel = nil
+		end
+	end
+
 	DestroyDrawings(obj.Drawings)
 
 	return true
 end
-
 -- ===== 全局单 RenderStepped =====
 
 RunService.RenderStepped:Connect(function()
@@ -471,19 +479,15 @@ RunService.RenderStepped:Connect(function()
 		local isChinese = hasNonASCII(nameTxt)
 
 		if isChinese then
-			-- 中文：用 TextLabel
 			d.Name.Visible = false
 			d.NameBg.Visible = false
 			if not TBL.fallbackLabel then
 				TBL.fallbackLabel = createFallbackLabel()
 			end
-			TBL.fallbackLabel.Text = nameTxt
-			local sp, onScreen = Camera:WorldToScreenPoint(objPos)
-			if onScreen and sp.Z > 0 then
-				TBL.fallbackLabel.Position = UDim2.fromOffset(sp.X, nameTopY)
-			else
-				TBL.fallbackLabel.Visible = false
-			end
+			local lbl = TBL.fallbackLabel
+			lbl.Text = nameTxt
+			lbl.Position = UDim2.fromOffset(centerX, nameTopY)
+			lbl.Visible = true
 		else
 			-- 英文：用 Drawing
 			if TBL.fallbackLabel then
@@ -568,17 +572,14 @@ RunService.RenderStepped:Connect(function()
 				drawing.Visible = false
 				if not item.fallbackLabel then
 					item.fallbackLabel = createFallbackLabel()
+					item.fallbackLabel.AnchorPoint = Vector2.new(0, 0)
+					item.fallbackLabel.Size = UDim2.fromOffset(200, 14)
 				end
 				local lbl = item.fallbackLabel
 				lbl.Text = txt
 				lbl.TextColor3 = col
-				local sp, onScreen = Camera:WorldToScreenPoint(objPos)
-				if onScreen and sp.Z > 0 then
-					lbl.Position = UDim2.fromOffset(x + w + 6, infoY)
-					lbl.Visible = true
-				else
-					lbl.Visible = false
-				end
+				lbl.Position = UDim2.fromOffset(x + w + 6, infoY)
+				lbl.Visible = true
 			else
 				if item.fallbackLabel then
 					item.fallbackLabel.Visible = false
