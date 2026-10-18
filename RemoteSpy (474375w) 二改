@@ -1494,12 +1494,12 @@ return function(Custom)
 		oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(...)
 			local self = (...)
 			local method = getnamecallmethod()
-			if typeof(...) == "Instance" and 
-				method and 
+			if	method and 
 				(
 					string.lower(method) == "fireserver" or 
 						string.lower(method) == "invokeserver"
-				) 
+				) and
+					typeof(self) == "Instance"
 					and 
 					(
 						IsA(self,"RemoteEvent") or 
