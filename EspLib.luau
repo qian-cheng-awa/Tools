@@ -408,6 +408,10 @@ function EspLib:UnwrapObject(Object)
 
 	for i = 1, #obj.infoDrawings do
 		local item = obj.infoDrawings[i]
+		if item.Drawing and item.Drawing.Destroy then
+			item.Drawing:Destroy()
+			item.Drawing = nil
+		end
 		if item.fallbackLabel then
 			item.fallbackLabel:Destroy()
 			item.fallbackLabel = nil
