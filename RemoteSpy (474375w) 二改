@@ -1494,7 +1494,19 @@ return function(Custom)
 		local NewNamecall = newcclosure(function(...)
 			local self = (...)
 			local method = getnamecallmethod()
-			if self and method and (string.lower(method) == "fireserver" or string.lower(method) == "invokeserver") and (IsA(self,"RemoteEvent") or IsA(self,"RemoteFunction") or IsA(self,"UnreliableRemoteEvent")) then
+			if typeof(...) == "Instance" and 
+				method and 
+				(
+					string.lower(method) == "fireserver" or 
+					string.lower(method) == "invokeserver"
+				) 
+					and 
+				(
+					IsA(self,"RemoteEvent") or 
+					IsA(self,"RemoteFunction") or 
+					IsA(self,"UnreliableRemoteEvent")
+				) 
+			then
 				hook(self, method, select(2,...))
 			end
 			return oldNamecall(...)
@@ -1531,7 +1543,7 @@ return function(Custom)
 			local self = args[1]
 			local key = args[2]
 			local value = args[3]
-			if not checkcaller() and self and key and value then
+			if not checkcaller() and typeof(self) == "Instance" and key and value then
 				if typeof(key) == "string" and key:lower() == "onclientinvoke" and self:IsA("RemoteFunction") then
 					if typeof(value) == "function" then
 						local old = HookedClientInvokes[self]
