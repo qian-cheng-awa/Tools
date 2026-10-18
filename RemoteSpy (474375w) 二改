@@ -1457,7 +1457,7 @@ return function(Custom)
 	local StringCache = {}
 
 	local function hook(self, method, ...)
-		if method ~= "OnClientEvent" and method ~= "OnClientInvoke" and checkcaller() then
+		if string.lower(method) ~= "onclientevent" and string.lower(method) ~= "onclientinvoke" and checkcaller() then
 			return
 		end
 
@@ -1498,6 +1498,11 @@ return function(Custom)
 					local remote = cloneref(...)
 					local self = (...)
 					if IsA(remote, "RemoteEvent") or IsA(remote, "RemoteFunction") or IsA(remote, "UnreliableRemoteEvent") then
+						if method == "fireserver" then
+							method = "FireServer"
+						elseif method == "invokeserver" then
+							method = "InvokeServer"
+						end
 						hook(self, method, select(2, ...))
 					end
 				end
@@ -1506,14 +1511,25 @@ return function(Custom)
 			return oldNamecall(...)
 		end))
 
-		oldFireServer = hookfunction(getrawmetatable(game).__index(Instance.new("RemoteEvent"), "FireServer"), newcclosure(function(self, ...)
-			hook(self, "FireServer", ...)
-			return oldFireServer(self, ...)
+		oldFireServer = hookfunction(getrawmetatable(game).__index(Instance.new("RemoteEvent"), "FireServer"), newcclosure(function(...)
+			if typeof(...) == "Instance" then
+				local remote = cloneref(...)
+				if IsA(remote, "RemoteEvent") or IsA(remote, "UnreliableRemoteEvent") then
+					hook((...), "FireServer", select(2,...))
+				end
+			end
+			
+			return oldFireServer(...)
 		end))
 
-		oldInvokeServer = hookfunction(getrawmetatable(game).__index(Instance.new("RemoteFunction"), "InvokeServer"), newcclosure(function(self, ...)
-			hook(self, "InvokeServer", ...)
-			return oldInvokeServer(self, ...)
+		oldInvokeServer = hookfunction(getrawmetatable(game).__index(Instance.new("RemoteFunction"), "InvokeServer"), newcclosure(function(...)
+			if typeof(...) == "Instance" then
+				local remote = cloneref(...)
+				if IsA(remote, "RemoteFunction") then
+					hook((...), "InvokeServer", select(2,...))
+				end
+			end
+			return oldInvokeServer(...)
 		end))
 
 		local function NewRemoteFunction(RF,_function)
