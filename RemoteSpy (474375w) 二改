@@ -1492,19 +1492,15 @@ return function(Custom)
 		local IsA = game.IsA
 		
 		oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(...)
-			local method = getnamecallmethod()
-			if not (method == "FireServer" or method == "fireServer"
-				or method == "InvokeServer" or method == "invokeServer") then
-				return oldNamecall(...)
-			end
-
-			local self = (...)
-			if typeof(self) ~= "Instance" then
-				return oldNamecall(...)
-			end
-
-			if IsA(self, "RemoteEvent") or IsA(self, "RemoteFunction") or IsA(self, "UnreliableRemoteEvent") then
-				hook(self, method, select(2, ...))
+			local method = string.lower(getnamecallmethod() or "")
+			if method and (method == "fireserver" or method == "invokeserver") then
+				if typeof(...) == "Instance" then
+					local remote = cloneref(...)
+					local self = (...)
+					if IsA(remote, "RemoteEvent") or IsA(remote, "RemoteFunction") or IsA(remote, "UnreliableRemoteEvent") then
+						hook(self, method, select(2, ...))
+					end
+				end
 			end
 
 			return oldNamecall(...)
