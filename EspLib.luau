@@ -6,8 +6,6 @@ local EspLib = {
 	Objects = {},
 }
 
--- ===== 工具函数 =====
-
 local function GetVal(val, ...)
 	if typeof(val) == "function" then
 		return val(...)
@@ -15,7 +13,6 @@ local function GetVal(val, ...)
 	return val
 end
 
--- 计算模型/部件在屏幕上的包围盒（像素）
 local function GetOnScreenBounds(model)
 	local cf, size
 	if model:IsA("Model") then
@@ -64,15 +61,33 @@ local function GetOnScreenBounds(model)
 	}
 end
 
--- 创建一组 Drawing 对象
+local function textHeight(drawing)
+	local ok, bounds = pcall(function() return drawing:GetTextBounds() end)
+	if ok and typeof(bounds) == "Vector2" then
+		return bounds.Y
+	end
+	return drawing.Size
+end
+
 local function CreateDrawings()
 	local d = {}
 
+	d.BoxShadow = Drawing.new("Square")
+	d.BoxShadow.Filled = false
+	d.BoxShadow.Thickness = 2
+	d.BoxShadow.Color = Color3.fromRGB(0, 0, 0)
+	d.BoxShadow.Transparency = 0.8
+
 	d.Box = Drawing.new("Square")
-	d.Box.Thickness = 1
 	d.Box.Filled = false
+	d.Box.Thickness = 1
 	d.Box.Color = Color3.fromRGB(255, 255, 255)
 	d.Box.Transparency = 1
+
+	d.NameBg = Drawing.new("Square")
+	d.NameBg.Filled = true
+	d.NameBg.Color = Color3.fromRGB(20, 20, 25)
+	d.NameBg.Transparency = 0.35
 
 	d.Name = Drawing.new("Text")
 	d.Name.Center = true
@@ -85,22 +100,31 @@ local function CreateDrawings()
 
 	d.HealthBarBg = Drawing.new("Square")
 	d.HealthBarBg.Filled = true
-	d.HealthBarBg.Color = Color3.fromRGB(54, 22, 4)
-	d.HealthBarBg.Transparency = 1
+	d.HealthBarBg.Color = Color3.fromRGB(30, 30, 35)
+	d.HealthBarBg.Transparency = 0.6
 
 	d.HealthBar = Drawing.new("Square")
 	d.HealthBar.Filled = true
-	d.HealthBar.Color = Color3.fromRGB(79, 214, 59)
-	d.HealthBar.Transparency = 1
+	d.HealthBar.Color = Color3.fromRGB(80, 220, 120)
+	d.HealthBar.Transparency = 0.95
 
 	d.HealthText = Drawing.new("Text")
 	d.HealthText.Center = true
 	d.HealthText.Outline = true
 	d.HealthText.OutlineColor = Color3.fromRGB(0, 0, 0)
 	d.HealthText.Color = Color3.fromRGB(255, 255, 255)
-	d.HealthText.Size = 14
+	d.HealthText.Size = 12
 	d.HealthText.Font = Drawing.Fonts.System
 	d.HealthText.Transparency = 1
+
+	d.Distance = Drawing.new("Text")
+	d.Distance.Center = true
+	d.Distance.Outline = true
+	d.Distance.OutlineColor = Color3.fromRGB(0, 0, 0)
+	d.Distance.Color = Color3.fromRGB(200, 200, 200)
+	d.Distance.Size = 12
+	d.Distance.Font = Drawing.Fonts.System
+	d.Distance.Transparency = 1
 
 	return d
 end
@@ -113,7 +137,6 @@ local function DestroyDrawings(d)
 	end
 end
 
--- ===== 核心 API =====
 
 function EspLib:WrapObject(Args)
 	if not Args or not Args.Object then return end
@@ -147,6 +170,7 @@ function EspLib:WrapObject(Args)
 
 	local d = CreateDrawings()
 	d.Box.Visible = ShowBox
+	d.BoxShadow.Visible = ShowBox
 
 	local TBL = {
 		Drawings = d,
@@ -158,22 +182,11 @@ function EspLib:WrapObject(Args)
 
 	EspLib.Objects[Object] = TBL
 
-	-- 文本显示
-	local function updateDisplayText()
-		local txt
-		if DisplayText then
-			txt = typeof(DisplayText) == "function" and DisplayText(Object) or tostring(DisplayText)
-		else
-			txt = Object.Name
-		end
-		d.Name.Text = tostring(txt or "")
-	end
-	updateDisplayText()
-
-	-- 颜色
+	-- 颜色应用
 	local function applyTextColor(c)
 		d.Name.Color = c
 		d.HealthText.Color = c
+		d.Distance.Color = c
 	end
 	local function applyBoxColor(c)
 		d.Box.Color = c
@@ -201,18 +214,18 @@ function EspLib:WrapObject(Args)
 		Humanoid = Object:FindFirstChildOfClass("Humanoid")
 	end
 
-	-- 信息行
+	-- 信息行（左对齐排列在框左侧）
 	local infoDrawings = {}
-	for i, v in pairs(Infos) do
+	for _, v in pairs(Infos) do
 		local t = Drawing.new("Text")
-		t.Center = true
+		t.Center = false
 		t.Outline = true
 		t.OutlineColor = Color3.fromRGB(0, 0, 0)
-		t.Color = Color3.fromRGB(255, 255, 255)
-		t.Size = 13
+		t.Color = Color3.fromRGB(220, 220, 220)
+		t.Size = 12
 		t.Font = Drawing.Fonts.System
 		t.Transparency = 1
-		infoDrawings[#infoDrawings + 1] = { Drawing = t, Config = v, Index = i }
+		infoDrawings[#infoDrawings + 1] = { Drawing = t, Config = v }
 	end
 
 	-- 每帧更新
@@ -222,9 +235,9 @@ function EspLib:WrapObject(Args)
 			return
 		end
 
-		local dist = (Camera.CFrame.Position - (Object:IsA("Model") and Object:GetPivot().Position or Object.Position)).Magnitude
+		local objPos = Object:IsA("Model") and Object:GetPivot().Position or Object.Position
+		local dist = (Camera.CFrame.Position - objPos).Magnitude
 		if dist > RenderDistance then
-			-- 超出距离隐藏
 			for _, obj in pairs(d) do
 				if obj.Visible ~= nil then obj.Visible = false end
 			end
@@ -248,19 +261,38 @@ function EspLib:WrapObject(Args)
 		local x, y, w, h = bounds.X, bounds.Y, bounds.W, bounds.H
 		local centerX = x + w * 0.5
 
-		-- 框
+		-- ===== 方框（双层） =====
+		local thickness = d.Box.Thickness
+		d.BoxShadow.Visible = ShowBox
+		d.BoxShadow.Position = Vector2.new(x - 1, y - 1)
+		d.BoxShadow.Size = Vector2.new(w + 2, h + 2)
+
 		d.Box.Visible = ShowBox
-		d.Box.Position = Vector2.new(x, y)
-		d.Box.Size = Vector2.new(w, h)
+		d.Box.Position = Vector2.new(x + thickness * 0.5, y + thickness * 0.5)
+		d.Box.Size = Vector2.new(w - thickness, h - thickness)
 
-		-- 名字（框上方）
-		d.Name.Visible = true
-		d.Name.Position = Vector2.new(centerX, y - 16)
-		if DisplayText and typeof(DisplayText) == "function" then
-			d.Name.Text = tostring(DisplayText(Object) or "")
+		-- ===== 名字（框上方，带背景条） =====
+		local nameTxt
+		if DisplayText then
+			nameTxt = typeof(DisplayText) == "function" and DisplayText(Object) or tostring(DisplayText)
+		else
+			nameTxt = Object.Name
 		end
+		nameTxt = tostring(nameTxt or "")
 
-		-- 血量
+		d.Name.Text = nameTxt
+		d.Name.Visible = true
+		local nameH = textHeight(d.Name)
+		local nameY = y - nameH - 6
+		d.Name.Position = Vector2.new(centerX, nameY)
+
+		-- 背景条：用文字宽度近似（Center 模式下无法直接拿宽度，用字符数估算）
+		local approxW = #nameTxt * d.Name.Size * 0.55 + 8
+		d.NameBg.Visible = true
+		d.NameBg.Position = Vector2.new(centerX - approxW * 0.5, nameY - 2)
+		d.NameBg.Size = Vector2.new(approxW, nameH + 4)
+
+		-- ===== 血条 =====
 		if Humanoid then
 			local hp = Humanoid.Health
 			local maxHp = Humanoid.MaxHealth
@@ -278,43 +310,57 @@ function EspLib:WrapObject(Args)
 			d.HealthBar.Position = Vector2.new(x, barY)
 			d.HealthBar.Size = Vector2.new(barW * ratio, barH)
 
+			-- 血量颜色随比例变化：绿 -> 黄 -> 红
+			if ratio > 0.5 then
+				local t = (ratio - 0.5) / 0.5
+				d.HealthBar.Color = Color3.fromRGB(255, 200, 0):Lerp(Color3.fromRGB(80, 220, 120), t)
+			else
+				local t = ratio / 0.5
+				d.HealthBar.Color = Color3.fromRGB(220, 60, 60):Lerp(Color3.fromRGB(255, 200, 0), t)
+			end
+
 			d.HealthText.Visible = true
+			local hpTxt = string.format("%d / %d", math.floor(hp), math.floor(maxHp))
+			d.HealthText.Text = hpTxt
 			d.HealthText.Position = Vector2.new(centerX, barY + barH + 2)
-			d.HealthText.Text = string.format("%.1f/%.1f", hp, maxHp)
 		else
 			d.HealthBarBg.Visible = false
 			d.HealthBar.Visible = false
 			d.HealthText.Visible = false
 		end
 
-		-- 信息行（框下方依次排列）
-		local infoY = y + h + (Humanoid and 30 or 6)
+		-- ===== 距离（框底部） =====
+		d.Distance.Visible = true
+		d.Distance.Text = string.format("[%d studs]", math.floor(dist))
+		local distY = y + h + (Humanoid and 30 or 8)
+		d.Distance.Position = Vector2.new(centerX, distY)
+
+		-- ===== 信息行（左对齐，从框右侧开始） =====
+		local infoY = y
 		for _, item in ipairs(infoDrawings) do
 			local v = item.Config
 			local txt = GetVal(v.Text, Object)
 			local col = GetVal(v.Color, Object)
 			item.Drawing.Visible = true
 			item.Drawing.Text = tostring(txt or "")
-			item.Drawing.Color = col or Color3.fromRGB(255, 255, 255)
-			item.Drawing.Position = Vector2.new(centerX, infoY)
-			infoY = infoY + 15
+			item.Drawing.Color = col or Color3.fromRGB(220, 220, 220)
+			item.Drawing.Position = Vector2.new(x + w + 6, infoY)
+			infoY = infoY + 14
 		end
 	end)
 
 	TBL.RenderConn = renderConn
 
 	-- 清理
-	local destroyingConn = Object.Destroying:Once(function()
+	TBL.DestroyingConn = Object.Destroying:Once(function()
 		EspLib:UnwrapObject(Object)
 	end)
-	TBL.DestroyingConn = destroyingConn
 
-	local ancestryConn = Object.AncestryChanged:Connect(function()
+	TBL.AncestryConn = Object.AncestryChanged:Connect(function()
 		if not Object:IsDescendantOf(workspace) then
 			EspLib:UnwrapObject(Object)
 		end
 	end)
-	TBL.AncestryConn = ancestryConn
 
 	return {
 		ChangeColor = function(obj, c)
