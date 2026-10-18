@@ -1,171 +1,32 @@
 local Player = game:GetService("Players").LocalPlayer
+local Camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+
 local EspLib = {
 	Objects = {},
 }
 
-local GuiMain = Player.PlayerGui
-if gethui then
-	GuiMain = gethui()
-elseif game.CoreGui then
-	GuiMain = game.CoreGui
-else
-	GuiMain = Instance.new("ScreenGui",Player.PlayerGui)
-	GuiMain.Name = "Esp"
-	GuiMain.ResetOnSpawn = false
-	GuiMain.IgnoreGuiInset = true
-end
+-- ===== 工具函数 =====
 
-if GuiMain:FindFirstChild("Bi_Xie Esp") then
-	GuiMain["Bi_Xie Esp"]:Destroy()
-end
-
-local EspFolder = Instance.new("Folder",GuiMain)
-EspFolder.Name = "Bi_Xie Esp"
-EspFolder:ClearAllChildren()
-
-local function GetVal(val,...)
+local function GetVal(val, ...)
 	if typeof(val) == "function" then
 		return val(...)
 	end
 	return val
 end
 
-
-local Main = Instance.new("BillboardGui")
-Main.LightInfluence = 1
-Main.Name = "Main"
-Main.Active = true
-Main.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-Main.AlwaysOnTop = true
-Main.Size = UDim2.new(4, 300, 5, 200)
-
-local Box = Instance.new("Frame")
-Box.BorderColor3 = Color3.fromRGB(0, 0, 0)
-Box.AnchorPoint = Vector2.new(0.5, 0.5)
-Box.Parent = Main
-Box.BackgroundTransparency = 1
-Box.Position = UDim2.fromScale(0.5, 0.5)
-Box.Name = "Box"
-Box.Size = UDim2.new(1, -300, 1, -200)
-Box.BorderSizePixel = 0
-Box.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = Color3.fromRGB(255, 255, 255)
-UIStroke.Parent = Box
-
-local HealthBar = Instance.new("Frame")
-HealthBar.AnchorPoint = Vector2.new(0.5, 0)
-HealthBar.Parent = Box
-HealthBar.Name = "HealthBar"
-HealthBar.Position = UDim2.fromScale(0.5, 0)
-HealthBar.BorderColor3 = Color3.fromRGB(0, 0, 0)
-HealthBar.Size = UDim2.fromOffset(100, 5)
-HealthBar.BorderSizePixel = 0
-HealthBar.BackgroundColor3 = Color3.fromRGB(54, 22, 4)
-
-local UICorner = Instance.new("UICorner")
-UICorner.Parent = HealthBar
-UICorner.CornerRadius = UDim.new(1, 0)
-
-local Frame = Instance.new("Frame")
-Frame.Parent = HealthBar
-Frame.BorderColor3 = Color3.fromRGB(0, 0, 0)
-Frame.Size = UDim2.fromScale(1, 1)
-Frame.BorderSizePixel = 0
-Frame.BackgroundColor3 = Color3.fromRGB(79, 214, 59)
-
-local UICorner = Instance.new("UICorner")
-UICorner.Parent = Frame
-UICorner.CornerRadius = UDim.new(1, 0)
-
-local HealthDisplay = Instance.new("TextLabel")
-HealthDisplay.Parent = Box
-HealthDisplay.TextWrapped = true
-HealthDisplay.Name = "HealthDisplay"
-HealthDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
-HealthDisplay.BorderColor3 = Color3.fromRGB(0, 0, 0)
-HealthDisplay.Text = "100/100"
-HealthDisplay.TextSize = 14
-HealthDisplay.Size = UDim2.fromOffset(300, 25)
-HealthDisplay.AnchorPoint = Vector2.new(0.5, 0)
-HealthDisplay.Font = Enum.Font.SourceSans
-HealthDisplay.BackgroundTransparency = 1
-HealthDisplay.Position = UDim2.fromScale(0.5, 0)
-HealthDisplay.BorderSizePixel = 0
-HealthDisplay.ZIndex = 2
-HealthDisplay.TextScaled = true
-HealthDisplay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Parent = HealthDisplay
-
-local Display = Instance.new("TextLabel")
-Display.TextWrapped = true
-Display.Parent = Box
-Display.TextColor3 = Color3.fromRGB(255, 255, 255)
-Display.BorderColor3 = Color3.fromRGB(0, 0, 0)
-Display.Text = "Obi_xieO(@ZJW9901)"
-Display.Name = "Display"
-Display.Size = UDim2.fromOffset(300, 25)
-Display.AnchorPoint = Vector2.new(0.5, 0.8999999761581421)
-Display.Font = Enum.Font.SourceSans
-Display.BackgroundTransparency = 1
-Display.Position = UDim2.fromScale(0.5, 0)
-Display.BorderSizePixel = 0
-Display.TextSize = 14
-Display.TextScaled = true
-Display.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-
-local UIStroke = Instance.new("UIStroke")
-UIStroke.Parent = Display
-
-local Infos = Instance.new("Frame")
-Infos.BorderColor3 = Color3.fromRGB(0, 0, 0)
-Infos.AnchorPoint = Vector2.new(1, 0)
-Infos.Parent = Box
-Infos.BackgroundTransparency = 1
-Infos.Position = UDim2.fromOffset(0, 25)
-Infos.Name = "Infos"
-Infos.Size = UDim2.fromOffset(100, 100)
-Infos.BorderSizePixel = 0
-Infos.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Parent = Infos
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
-local Template = Instance.new("TextLabel")
-Template.TextWrapped = true
-Template.Parent = UIListLayout
-Template.TextColor3 = Color3.fromRGB(255, 255, 255)
-Template.BorderColor3 = Color3.fromRGB(0, 0, 0)
-Template.Text = ""
-Template.Name = "Template"
-Template.Size = UDim2.fromScale(1, 0.20000000298023224)
-Template.AnchorPoint = Vector2.new(0.5, 0)
-Template.Font = Enum.Font.SourceSans
-Template.BackgroundTransparency = 1
-Template.Position = UDim2.fromScale(0.5, 0)
-Template.BorderSizePixel = 0
-Template.TextSize = 14
-Template.TextScaled = true
-Template.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-
-function GetOnScreenSize(model:Model?)
-	local camera = workspace.CurrentCamera
-	
+-- 计算模型/部件在屏幕上的包围盒（像素）
+local function GetOnScreenBounds(model)
 	local cf, size
 	if model:IsA("Model") then
 		cf, size = model:GetPivot(), model:GetExtentsSize()
 	elseif model:IsA("BasePart") then
 		cf, size = model.CFrame, model.Size
 	else
-		return Vector2.zero, false
+		return nil
 	end
 
 	local half = size * 0.5
-
 	local corners = {
 		cf * CFrame.new(-half.X, -half.Y, -half.Z),
 		cf * CFrame.new( half.X, -half.Y, -half.Z),
@@ -180,232 +41,325 @@ function GetOnScreenSize(model:Model?)
 	local minX, minY = math.huge, math.huge
 	local maxX, maxY = -math.huge, -math.huge
 
-	for _, worldPos in ipairs(corners) do
-
-		local screenPos, onScreen = camera:WorldToScreenPoint(worldPos.Position)
-		
-		if screenPos.Z <= 0 then
+	for _, c in ipairs(corners) do
+		local sp, onScreen = Camera:WorldToScreenPoint(c.Position)
+		if sp.Z <= 0 then
 			continue
 		end
-		
-		minX = math.min(minX, screenPos.X)
-		minY = math.min(minY, screenPos.Y)
-		maxX = math.max(maxX, screenPos.X)
-		maxY = math.max(maxY, screenPos.Y)
+		minX = math.min(minX, sp.X)
+		minY = math.min(minY, sp.Y)
+		maxX = math.max(maxX, sp.X)
+		maxY = math.max(maxY, sp.Y)
 	end
-	
+
 	if minX == math.huge then
-		return UDim2.fromOffset(0, 0)
+		return nil
 	end
-	
-	return UDim2.fromOffset(maxX - minX, maxY - minY)
+
+	return {
+		X = minX,
+		Y = minY,
+		W = maxX - minX,
+		H = maxY - minY,
+	}
 end
 
+-- 创建一组 Drawing 对象
+local function CreateDrawings()
+	local d = {}
+
+	d.Box = Drawing.new("Square")
+	d.Box.Thickness = 1
+	d.Box.Filled = false
+	d.Box.Color = Color3.fromRGB(255, 255, 255)
+	d.Box.Transparency = 1
+
+	d.Name = Drawing.new("Text")
+	d.Name.Center = true
+	d.Name.Outline = true
+	d.Name.OutlineColor = Color3.fromRGB(0, 0, 0)
+	d.Name.Color = Color3.fromRGB(255, 255, 255)
+	d.Name.Size = 14
+	d.Name.Font = Drawing.Fonts.System
+	d.Name.Transparency = 1
+
+	d.HealthBarBg = Drawing.new("Square")
+	d.HealthBarBg.Filled = true
+	d.HealthBarBg.Color = Color3.fromRGB(54, 22, 4)
+	d.HealthBarBg.Transparency = 1
+
+	d.HealthBar = Drawing.new("Square")
+	d.HealthBar.Filled = true
+	d.HealthBar.Color = Color3.fromRGB(79, 214, 59)
+	d.HealthBar.Transparency = 1
+
+	d.HealthText = Drawing.new("Text")
+	d.HealthText.Center = true
+	d.HealthText.Outline = true
+	d.HealthText.OutlineColor = Color3.fromRGB(0, 0, 0)
+	d.HealthText.Color = Color3.fromRGB(255, 255, 255)
+	d.HealthText.Size = 14
+	d.HealthText.Font = Drawing.Fonts.System
+	d.HealthText.Transparency = 1
+
+	return d
+end
+
+local function DestroyDrawings(d)
+	for _, obj in pairs(d) do
+		if obj and obj.Destroy then
+			obj:Destroy()
+		end
+	end
+end
+
+-- ===== 核心 API =====
+
 function EspLib:WrapObject(Args)
+	if not Args or not Args.Object then return end
 	if EspLib.Objects[Args.Object] then return end
 
 	Args.Configs = Args.Configs or {}
 
-	if Args.Color then
-		if typeof(Args.Color) == "table" then
-			Args.Color = {
-				Text = Args.Color.Text or Color3.fromRGB(255, 255, 255),
-				Box = Args.Color.Box or Color3.fromRGB(255, 255, 255),
+	local color = Args.Color
+	if color then
+		if typeof(color) == "table" then
+			color = {
+				Text = color.Text or Color3.fromRGB(255, 255, 255),
+				Box = color.Box or Color3.fromRGB(255, 255, 255),
 			}
 		else
-			Args.Color = {
-				Text = Args.Color,
-				Box = Args.Color,
-			}
+			color = { Text = color, Box = color }
 		end
 	else
-		Args.Color = {
+		color = {
 			Text = Color3.fromRGB(255, 255, 255),
 			Box = Color3.fromRGB(255, 255, 255),
 		}
 	end
 
-	if not Args.Object then return end
-	Args = {
-		Object = Args.Object,
-		DisplayText = Args.DisplayText,
-		Configs = {
-			HealthBar = Args.Configs.HealthBar or true,
-			Box = Args.Configs.Box or true,
-		},
-		RenderDistance = Args.RenderDistance or math.huge,
-		Color = Args.Color,
-		Infos = Args.Infos or {},
-	}
-
-	local NewUi = Main:Clone()
-	NewUi.MaxDistance = Args.RenderDistance
-	NewUi.Box.UIStroke.Enabled = Args.Configs.Box
-
 	local Object = Args.Object
-	
-	NewUi.Size = GetOnScreenSize(Object)+UDim2.fromOffset(300,200)
-	
-	if Object:IsA("Model") then
-		if not Object:FindFirstChild("Humanoid") or not Args.Configs.HealthBar then
-			NewUi.Box.HealthBar:Destroy()
-			NewUi.Box.HealthDisplay:Destroy()
-		else
-			local Humanoid = Object:FindFirstChild("Humanoid")
+	local RenderDistance = Args.RenderDistance or math.huge
+	local ShowHealthBar = Args.Configs.HealthBar ~= false
+	local ShowBox = Args.Configs.Box ~= false
+	local Infos = Args.Infos or {}
+	local DisplayText = Args.DisplayText
 
-			local HealthBar = NewUi.Box.HealthBar
-			local HealthDisplay = NewUi.Box.HealthDisplay
+	local d = CreateDrawings()
+	d.Box.Visible = ShowBox
 
-			local function Update()
-				if HealthBar and HealthBar:FindFirstChild("Frame") then
-					local Health = Humanoid.Health
-					local MaxHealth = Humanoid.MaxHealth
-
-					HealthDisplay.Text = `{math.floor(Health*10)/10}/{math.floor(MaxHealth*10)/10}`
-					HealthBar.Frame.Size = UDim2.fromScale(Health/MaxHealth,1)
-				end
-			end
-
-			Update()
-
-			Humanoid:GetPropertyChangedSignal("Health"):Connect(Update)
-			Humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(Update)
-		end
-	end
-
-	local TBL = {Ui = NewUi,Connections = {}}
+	local TBL = {
+		Drawings = d,
+		Connections = {},
+		TextConnect = nil,
+		BoxColorConnect = nil,
+		TextColorConnect = nil,
+	}
 
 	EspLib.Objects[Object] = TBL
 
-	if Args.DisplayText then
-		if typeof(Args.DisplayText) == "function" then
-			TBL.TextConnect = game:GetService("RunService").RenderStepped:Connect(function()
-				local Text = Args.DisplayText(Object)
-				if Text then
-					NewUi.Box.Display.Text = Text
-				end
-			end)
+	-- 文本显示
+	local function updateDisplayText()
+		local txt
+		if DisplayText then
+			txt = typeof(DisplayText) == "function" and DisplayText(Object) or tostring(DisplayText)
 		else
-			NewUi.Box.Display.Text = tostring(Args.DisplayText)
+			txt = Object.Name
 		end
+		d.Name.Text = tostring(txt or "")
+	end
+	updateDisplayText()
+
+	-- 颜色
+	local function applyTextColor(c)
+		d.Name.Color = c
+		d.HealthText.Color = c
+	end
+	local function applyBoxColor(c)
+		d.Box.Color = c
+	end
+
+	if typeof(color.Text) == "function" then
+		TBL.TextColorConnect = RunService.RenderStepped:Connect(function()
+			applyTextColor(color.Text(Object))
+		end)
 	else
-		NewUi.Box.Display.Text = Object.Name
+		applyTextColor(color.Text)
 	end
 
-	local function ChangeColor(Obj,Color)
-		if Obj:lower() == "text" then
-			local function Update(Color)
-				NewUi.Box.Display.TextColor3 = Color
-				if NewUi.Box:FindFirstChild("HealthDisplay") then
-					NewUi.Box.HealthDisplay.TextColor3 = Color
-				end
-			end
-
-			if typeof(Color) == "function" then
-				if TBL.TextColorConnect then
-					TBL.TextColorConnect:Disconnect()
-				end
-
-				TBL.TextColorConnect = game:GetService("RunService").RenderStepped:Connect(function()
-					Update(Color(Object))
-				end)
-			else
-				Update(Color)
-			end
-		elseif Obj:lower() == "box" then
-			local function Update(Color)
-				NewUi.Box.UIStroke.Color = Color
-			end
-
-			if typeof(Color) == "function" then
-				if TBL.BoxColorConnect then
-					TBL.BoxColorConnect:Disconnect()
-				end
-
-				TBL.BoxColorConnect = game:GetService("RunService").RenderStepped:Connect(function()
-					Update(Color(Object))
-				end)
-			else
-				Update(Color)
-			end
-		end	
+	if typeof(color.Box) == "function" then
+		TBL.BoxColorConnect = RunService.RenderStepped:Connect(function()
+			applyBoxColor(color.Box(Object))
+		end)
+	else
+		applyBoxColor(color.Box)
 	end
 
-	for i,v in pairs(Args.Infos) do
-		local NewInfo = NewUi.Box.Infos.UIListLayout.Template:Clone()
+	-- 血量
+	local Humanoid
+	if Object:IsA("Model") and ShowHealthBar then
+		Humanoid = Object:FindFirstChildOfClass("Humanoid")
+	end
 
-		local function Update(Text,Color)
-			NewInfo.Text = Text or ""
-			NewInfo.TextColor3 = Color or Color3.new(1,1,1)
+	-- 信息行
+	local infoDrawings = {}
+	for i, v in pairs(Infos) do
+		local t = Drawing.new("Text")
+		t.Center = true
+		t.Outline = true
+		t.OutlineColor = Color3.fromRGB(0, 0, 0)
+		t.Color = Color3.fromRGB(255, 255, 255)
+		t.Size = 13
+		t.Font = Drawing.Fonts.System
+		t.Transparency = 1
+		infoDrawings[#infoDrawings + 1] = { Drawing = t, Config = v, Index = i }
+	end
+
+	-- 每帧更新
+	local renderConn = RunService.RenderStepped:Connect(function()
+		if not Object or not Object.Parent then
+			EspLib:UnwrapObject(Object)
+			return
 		end
 
-		if typeof(v.Text) == "function" or typeof(v.Color) == "function" then
-			table.insert(TBL.Connections,game:GetService("RunService").RenderStepped:Connect(function()
-				Update(GetVal(v.Text,Object),GetVal(v.Color,Object))
-			end))
+		local dist = (Camera.CFrame.Position - (Object:IsA("Model") and Object:GetPivot().Position or Object.Position)).Magnitude
+		if dist > RenderDistance then
+			-- 超出距离隐藏
+			for _, obj in pairs(d) do
+				if obj.Visible ~= nil then obj.Visible = false end
+			end
+			for _, item in ipairs(infoDrawings) do
+				item.Drawing.Visible = false
+			end
+			return
+		end
+
+		local bounds = GetOnScreenBounds(Object)
+		if not bounds then
+			for _, obj in pairs(d) do
+				if obj.Visible ~= nil then obj.Visible = false end
+			end
+			for _, item in ipairs(infoDrawings) do
+				item.Drawing.Visible = false
+			end
+			return
+		end
+
+		local x, y, w, h = bounds.X, bounds.Y, bounds.W, bounds.H
+		local centerX = x + w * 0.5
+
+		-- 框
+		d.Box.Visible = ShowBox
+		d.Box.Position = Vector2.new(x, y)
+		d.Box.Size = Vector2.new(w, h)
+
+		-- 名字（框上方）
+		d.Name.Visible = true
+		d.Name.Position = Vector2.new(centerX, y - 16)
+		if DisplayText and typeof(DisplayText) == "function" then
+			d.Name.Text = tostring(DisplayText(Object) or "")
+		end
+
+		-- 血量
+		if Humanoid then
+			local hp = Humanoid.Health
+			local maxHp = Humanoid.MaxHealth
+			local ratio = maxHp > 0 and math.clamp(hp / maxHp, 0, 1) or 0
+
+			local barW = w
+			local barH = 4
+			local barY = y + h + 3
+
+			d.HealthBarBg.Visible = true
+			d.HealthBarBg.Position = Vector2.new(x, barY)
+			d.HealthBarBg.Size = Vector2.new(barW, barH)
+
+			d.HealthBar.Visible = true
+			d.HealthBar.Position = Vector2.new(x, barY)
+			d.HealthBar.Size = Vector2.new(barW * ratio, barH)
+
+			d.HealthText.Visible = true
+			d.HealthText.Position = Vector2.new(centerX, barY + barH + 2)
+			d.HealthText.Text = string.format("%.1f/%.1f", hp, maxHp)
 		else
-			Update(v.Text,v.Color)
+			d.HealthBarBg.Visible = false
+			d.HealthBar.Visible = false
+			d.HealthText.Visible = false
 		end
 
-		NewInfo.Name = tostring(i)
-		NewInfo.Parent = NewUi.Box.Infos
-	end
-
-	ChangeColor("Text",Args.Color.Text)
-	ChangeColor("Box",Args.Color.Box)
-
-	Object.Destroying:Once(function()
-		EspLib:UnwrapObject(Object)
+		-- 信息行（框下方依次排列）
+		local infoY = y + h + (Humanoid and 30 or 6)
+		for _, item in ipairs(infoDrawings) do
+			local v = item.Config
+			local txt = GetVal(v.Text, Object)
+			local col = GetVal(v.Color, Object)
+			item.Drawing.Visible = true
+			item.Drawing.Text = tostring(txt or "")
+			item.Drawing.Color = col or Color3.fromRGB(255, 255, 255)
+			item.Drawing.Position = Vector2.new(centerX, infoY)
+			infoY = infoY + 15
+		end
 	end)
 
-	local a;a = Object.AncestryChanged:Connect(function()
+	TBL.RenderConn = renderConn
+
+	-- 清理
+	local destroyingConn = Object.Destroying:Once(function()
+		EspLib:UnwrapObject(Object)
+	end)
+	TBL.DestroyingConn = destroyingConn
+
+	local ancestryConn = Object.AncestryChanged:Connect(function()
 		if not Object:IsDescendantOf(workspace) then
-			a:Disconnect()
 			EspLib:UnwrapObject(Object)
 		end
 	end)
-
-	NewUi.Parent = EspFolder
-	NewUi.Adornee = Object
+	TBL.AncestryConn = ancestryConn
 
 	return {
-		ChangeColor = ChangeColor,
+		ChangeColor = function(obj, c)
+			if obj:lower() == "text" then
+				if TBL.TextColorConnect then TBL.TextColorConnect:Disconnect() end
+				if typeof(c) == "function" then
+					TBL.TextColorConnect = RunService.RenderStepped:Connect(function()
+						applyTextColor(c(Object))
+					end)
+				else
+					applyTextColor(c)
+				end
+			elseif obj:lower() == "box" then
+				if TBL.BoxColorConnect then TBL.BoxColorConnect:Disconnect() end
+				if typeof(c) == "function" then
+					TBL.BoxColorConnect = RunService.RenderStepped:Connect(function()
+						applyBoxColor(c(Object))
+					end)
+				else
+					applyBoxColor(c)
+				end
+			end
+		end,
 	}
 end
 
 function EspLib:UnwrapObject(Object)
 	if not Object then return false end
+	local obj = EspLib.Objects[Object]
+	if not obj then return false end
 
-	local Obj = EspLib.Objects[Object]
-
-	if not Obj then return false end
-
-	Obj.Ui:Destroy()
-
-	if Obj.TextConnect then
-		Obj.TextConnect:Disconnect()
-	end
-	if Obj.BoxColorConnect then
-		Obj.BoxColorConnect:Disconnect()
-	end
-
-	if Obj.TextColorConnect then
-		Obj.TextColorConnect:Disconnect()
+	if obj.TextConnect then obj.TextConnect:Disconnect() end
+	if obj.BoxColorConnect then obj.BoxColorConnect:Disconnect() end
+	if obj.TextColorConnect then obj.TextColorConnect:Disconnect() end
+	if obj.RenderConn then obj.RenderConn:Disconnect() end
+	if obj.DestroyingConn then obj.DestroyingConn:Disconnect() end
+	if obj.AncestryConn then obj.AncestryConn:Disconnect() end
+	for _, c in ipairs(obj.Connections) do
+		c:Disconnect()
 	end
 
-	for i,v in pairs(Obj.Connections) do
-		v:Disconnect()
-	end
+	DestroyDrawings(obj.Drawings)
 
 	EspLib.Objects[Object] = nil
+	return true
 end
-
-game:GetService("RunService").RenderStepped:Connect(function(dt)
-	for i,v in EspLib.Objects do
-		if v.Ui then
-			v.Ui.Size = GetOnScreenSize(i) + UDim2.fromOffset(300,200)
-		end
-	end
-end)
 
 return EspLib
