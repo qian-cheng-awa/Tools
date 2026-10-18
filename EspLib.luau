@@ -13,8 +13,7 @@ local EspLib = {
         Color = Color3.fromRGB(255, 255, 255),
         Thickness = 1,
         Transparency = 1,
-        Length = 1000,
-        FollowBoxColor = true,          -- 颜色跟随方框颜色
+        FollowBoxColor = true,          -- 颜色跟随各自方框颜色
     },
 }
 
@@ -136,14 +135,6 @@ local function createFallbackLabel()
     return label
 end
 
--- ===== 全局射线 =====
-
-local rayLine = Drawing.new("Line")
-rayLine.Visible = false
-rayLine.Thickness = 1
-rayLine.Color = C3(255, 255, 255)
-rayLine.Transparency = 1
-
 -- ===== Drawing 创建 =====
 
 local function CreateDrawings()
@@ -203,6 +194,13 @@ local function CreateDrawings()
     d.Distance.Font = Drawing.Fonts.System
     d.Distance.Transparency = 1
 
+    -- 每个对象一条射线
+    d.Ray = Drawing.new("Line")
+    d.Ray.Visible = false
+    d.Ray.Thickness = 1
+    d.Ray.Transparency = 1
+    d.Ray.Color = C3(255, 255, 255)
+
     return d
 end
 
@@ -234,6 +232,7 @@ local function SetVisible(tbl, visible)
         d.HealthText.Visible = visible
     end
     d.Distance.Visible = visible
+    d.Ray.Visible = visible and EspLib.Ray.Enabled
 
     for i = 1, #infoDrawings do
         local item = infoDrawings[i]
@@ -421,34 +420,14 @@ function EspLib:UnwrapObject(Object)
 end
 
 RunService.RenderStepped:Connect(function()
-    -- ===== 射线更新 =====
-    local ray = EspLib.Ray
-    if ray.Enabled then
-        local vp = Camera.ViewportSize
-        local ox = ray.Origin.X * vp.X
-        local oy = ray.Origin.Y * vp.Y
-        if ray.Origin.Y == 0 then
-            oy = oy + OFFSET_Y
-        end
-
-        local cx, cy = vp.X * 0.5, vp.Y * 0.5
-        local dx, dy = cx - ox, cy - oy
-        local len = MathSqrt(dx * dx + dy * dy)
-        if len > 0 then
-            dx, dy = dx / len, dy / len
-        end
-
-        rayLine.Visible = true
-        rayLine.PointA = Vector2.new(ox, oy)
-        rayLine.PointB = Vector2.new(ox + dx * ray.Length, oy + dy * ray.Length)
-        rayLine.Color = ray.Color
-        rayLine.Thickness = ray.Thickness
-        rayLine.Transparency = ray.Transparency
-    else
-        rayLine.Visible = false
-    end
-
     local camPos = Camera.CFrame.Position
+    local rayCfg = EspLib.Ray
+    local vp = Camera.ViewportSize
+    local rayOriginX = rayCfg.Origin.X * vp.X
+    local rayOriginY = rayCfg.Origin.Y * vp.Y
+    if rayCfg.Origin.Y == 0 then
+        rayOriginY = rayOriginY + OFFSET_Y
+    end
 
     for Object, TBL in pairs(EspLib.Objects) do
         if TBL.destroyed or EspLib.Objects[Object] ~= TBL then
@@ -494,16 +473,12 @@ RunService.RenderStepped:Connect(function()
             TBL.boxColor = c
         end
 
-        -- 射线颜色跟随方框颜色
-        if ray.Enabled and ray.FollowBoxColor then
-            rayLine.Color = TBL.boxColor
-        end
-
         local x = bounds.bx + OFFSET_X
         local y = bounds.by + OFFSET_Y
         local w = bounds.bw
         local h = bounds.bh
         local centerX = x + w * 0.5
+        local centerY = y + h * 0.5
 
         local thickness = d.Box.Thickness
         d.BoxShadow.Visible = TBL.showBox
@@ -513,6 +488,18 @@ RunService.RenderStepped:Connect(function()
         d.Box.Visible = TBL.showBox
         d.Box.Position = V2(x + thickness * 0.5, y + thickness * 0.5)
         d.Box.Size = V2(w - thickness, h - thickness)
+
+        -- ===== 每个对象的射线 =====
+        if rayCfg.Enabled then
+            d.Ray.Visible = true
+            d.Ray.PointA = Vector2.new(rayOriginX, rayOriginY)
+            d.Ray.PointB = Vector2.new(centerX, centerY)
+            d.Ray.Color = rayCfg.FollowBoxColor and TBL.boxColor or rayCfg.Color
+            d.Ray.Thickness = rayCfg.Thickness
+            d.Ray.Transparency = rayCfg.Transparency
+        else
+            d.Ray.Visible = false
+        end
 
         local nameTxt
         local displayText = TBL.DisplayText
