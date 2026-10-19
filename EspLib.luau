@@ -42,17 +42,6 @@ local function hasNonASCII(text)
     return false
 end
 
-local function placeTextCentered(drawing, text, centerX, topY, cache)
-    if cache.lastText ~= text then
-        drawing.Text = text
-        cache.lastText = text
-        cache.width = drawing.TextBounds.X
-    end
-    drawing.Center = false
-    drawing.Position = V2(centerX - cache.width * 0.5, topY)
-    return cache.width
-end
-
 local function placeTextLeft(drawing, text, leftX, topY, cache)
     if cache.lastText ~= text then
         drawing.Text = text
@@ -134,12 +123,13 @@ local function createFallbackLabel()
     local label = Instance.new("TextLabel")
     label.BackgroundTransparency = 1
     label.Size = UDim2.fromOffset(240, 20)
-    label.AnchorPoint = Vector2.new(0.5, 0)
+    label.AnchorPoint = Vector2.new(0, 0)
     label.Font = Enum.Font.SourceSans
     label.TextSize = 14
     label.TextColor3 = C3(255, 255, 255)
     label.TextStrokeTransparency = 0
     label.TextStrokeColor3 = C3(0, 0, 0)
+    label.TextXAlignment = Enum.TextXAlignment.Left
     label.Text = ""
     label.Visible = false
     label.Parent = fallbackGui
@@ -219,7 +209,7 @@ local function DestroyDrawings(d)
     end
 end
 
--- ===== 可见性批量切换 =====
+-- ===== 可见性批量切换（只处理整体开关，不碰名字三段） =====
 
 local function SetVisible(tbl, visible)
     if tbl.visibleState == visible then return end
@@ -227,19 +217,20 @@ local function SetVisible(tbl, visible)
     local d = tbl.Drawings
 
     d.Box.Visible = visible and tbl.showBox
-    d.NameBg.Visible = visible and not tbl.isChinese
-    d.HpText.Visible = visible and not tbl.isChinese and tbl.humanoid ~= nil
-    d.NameText.Visible = visible and not tbl.isChinese
-    d.DistText.Visible = visible and not tbl.isChinese
     d.Ray.Visible = visible and EspLib.Ray.Enabled
 
-    if tbl.humanoid then
-        d.HealthBarBg.Visible = visible
-        d.HealthBar.Visible = visible
-    end
-
-    if tbl.fallbackLabel then
-        tbl.fallbackLabel.Visible = visible and tbl.isChinese
+    if not visible then
+        d.NameBg.Visible = false
+        d.HpText.Visible = false
+        d.NameText.Visible = false
+        d.DistText.Visible = false
+        if tbl.humanoid then
+            d.HealthBarBg.Visible = false
+            d.HealthBar.Visible = false
+        end
+        if tbl.hpLabel then tbl.hpLabel.Visible = false end
+        if tbl.nameLabel then tbl.nameLabel.Visible = false end
+        if tbl.distLabel then tbl.distLabel.Visible = false end
     end
 end
 
@@ -290,8 +281,9 @@ function EspLib:WrapObject(Args)
         textColorFunc = nil,
         boxColorFunc = nil,
         DisplayText = DisplayText,
-        isChinese = false,
-        fallbackLabel = nil,
+        hpLabel = nil,
+        nameLabel = nil,
+        distLabel = nil,
         Connections = {},
     }
 
@@ -360,9 +352,9 @@ function EspLib:UnwrapObject(Object)
         c:Disconnect()
     end
 
-    if obj.fallbackLabel then
-        obj.fallbackLabel:Destroy()
-    end
+    if obj.hpLabel then obj.hpLabel:Destroy() end
+    if obj.nameLabel then obj.nameLabel:Destroy() end
+    if obj.distLabel then obj.distLabel:Destroy() end
 
     DestroyDrawings(obj.Drawings)
 
@@ -469,7 +461,7 @@ RunService.RenderStepped:Connect(function()
             end
         end
 
-        -- 名字三段
+        -- 名字三段：各自检测中文、各自回退
         local nameTxt
         local displayText = TBL.DisplayText
         if displayText then
@@ -494,65 +486,105 @@ RunService.RenderStepped:Connect(function()
                 nameColor = team.TeamColor.Color
             end
         end
-        d.NameText.Color = nameColor
 
         local hpStr = ""
         if Humanoid then
-            hpStr = "♥" .. MathFloor(Humanoid.Health) .. " "
+            hpStr = "♥" .. MathFloor(Humanoid.Health)
         end
-        local distStr = " " .. distInt .. "m"
-        local fullLabel = hpStr .. nameTxt .. distStr
-        local isChinese = hasNonASCII(fullLabel)
+        local distStr = distInt .. "m"
 
-        if isChinese then
-            d.HpText.Visible = false
-            d.NameText.Visible = false
-            d.DistText.Visible = false
-            d.NameBg.Visible = false
-            if not TBL.fallbackLabel then
-                TBL.fallbackLabel = createFallbackLabel()
+        local nameH = d.NameText.Size
+        local nameTopY = y - nameH - 6
+
+        -- 先测量三段宽度
+        local hpW = 0
+        local hpCN = hpStr ~= "" and hasNonASCII(hpStr)
+        if hpStr ~= "" and not hpCN then
+            hpW = placeTextLeft(d.HpText, hpStr, 0, 0, TBL.HpCache)
+        end
+        local nameCN = hasNonASCII(nameTxt)
+        local nameW = 0
+        if not nameCN then
+            nameW = placeTextLeft(d.NameText, nameTxt, 0, 0, TBL.NameCache)
+        end
+        local distCN = hasNonASCII(distStr)
+        local distW = 0
+        if not distCN then
+            distW = placeTextLeft(d.DistText, distStr, 0, 0, TBL.DistCache)
+        end
+
+        -- 含中文的段宽度用 TextLabel 估算（宽度 60 足够显示短文本）
+        local hpDisplayW = hpCN and 60 or hpW
+        local nameDisplayW = nameCN and 120 or nameW
+        local distDisplayW = distCN and 40 or distW
+
+        -- 间距
+        local gap = 4
+        local totalW = hpDisplayW
+        if hpStr ~= "" then totalW = totalW + gap end
+        totalW = totalW + nameDisplayW
+        if distStr ~= "" then totalW = totalW + gap end
+        totalW = totalW + distDisplayW
+
+        local startX = centerX - totalW * 0.5
+
+        -- 血量段
+        if hpStr ~= "" then
+            if hpCN then
+                d.HpText.Visible = false
+                if not TBL.hpLabel then TBL.hpLabel = createFallbackLabel() end
+                local lbl = TBL.hpLabel
+                lbl.Text = hpStr
+                lbl.TextColor3 = C3(80, 220, 120)
+                lbl.Position = UDim2.fromOffset(startX, nameTopY)
+                lbl.Visible = true
+            else
+                if TBL.hpLabel then TBL.hpLabel.Visible = false end
+                d.HpText.Visible = true
+                placeTextLeft(d.HpText, hpStr, startX, nameTopY, TBL.HpCache)
             end
-            local lbl = TBL.fallbackLabel
-            lbl.Text = fullLabel
-            lbl.TextXAlignment = Enum.TextXAlignment.Center
-            lbl.Position = UDim2.fromOffset(centerX, y - d.NameText.Size - 6)
+            startX = startX + hpDisplayW + gap
+        else
+            d.HpText.Visible = false
+            if TBL.hpLabel then TBL.hpLabel.Visible = false end
+        end
+
+        -- 名字段
+        if nameCN then
+            d.NameText.Visible = false
+            if not TBL.nameLabel then TBL.nameLabel = createFallbackLabel() end
+            local lbl = TBL.nameLabel
+            lbl.Text = nameTxt
+            lbl.TextColor3 = nameColor
+            lbl.Position = UDim2.fromOffset(startX, nameTopY)
             lbl.Visible = true
         else
-            if TBL.fallbackLabel then
-                TBL.fallbackLabel.Visible = false
-            end
-            d.HpText.Visible = Humanoid ~= nil
+            if TBL.nameLabel then TBL.nameLabel.Visible = false end
             d.NameText.Visible = true
-            d.DistText.Visible = true
-            d.NameBg.Visible = true
-
-            local nameH = d.NameText.Size
-            local nameTopY = y - nameH - 6
-
-            local hpW = 0
-            if Humanoid then
-                hpW = placeTextLeft(d.HpText, hpStr, 0, 0, TBL.HpCache)
-            end
-            local nameW = placeTextLeft(d.NameText, nameTxt, 0, 0, TBL.NameCache)
-            local distW = placeTextLeft(d.DistText, distStr, 0, 0, TBL.DistCache)
-            local totalW = hpW + nameW + distW
-
-            local startX = centerX - totalW * 0.5
-            if Humanoid then
-                placeTextLeft(d.HpText, hpStr, startX, nameTopY, TBL.HpCache)
-                startX = startX + hpW
-            end
+            d.NameText.Color = nameColor
             placeTextLeft(d.NameText, nameTxt, startX, nameTopY, TBL.NameCache)
-            startX = startX + nameW
+        end
+        startX = startX + nameDisplayW + gap
+
+        -- 距离段
+        if distCN then
+            d.DistText.Visible = false
+            if not TBL.distLabel then TBL.distLabel = createFallbackLabel() end
+            local lbl = TBL.distLabel
+            lbl.Text = distStr
+            lbl.TextColor3 = C3(160, 160, 170)
+            lbl.Position = UDim2.fromOffset(startX, nameTopY)
+            lbl.Visible = true
+        else
+            if TBL.distLabel then TBL.distLabel.Visible = false end
+            d.DistText.Visible = true
             placeTextLeft(d.DistText, distStr, startX, nameTopY, TBL.DistCache)
-
-            d.NameBg.Position = V2(centerX - totalW * 0.5 - 6, nameTopY - 3)
-            d.NameBg.Size = V2(totalW + 12, nameH + 6)
         end
 
-        if TBL.isChinese ~= isChinese then
-            TBL.isChinese = isChinese
-        end
+        -- 背景
+        d.NameBg.Visible = true
+        d.NameBg.Position = V2(centerX - totalW * 0.5 - 6, nameTopY - 3)
+        d.NameBg.Size = V2(totalW + 12, nameH + 6)
 
         SetVisible(TBL, true)
     end
