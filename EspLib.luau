@@ -119,22 +119,15 @@ do
     fallbackGui.Parent = parent
 end
 
--- 名字行背景 + 文字（圆角由 UICorner 保证）
-local function createNameLabel()
+-- 整行背景：只做背景，圆角由 UICorner 保证
+local function createRowBg()
     local label = Instance.new("TextLabel")
     label.AnchorPoint = Vector2.new(0, 0)
-    label.Font = Enum.Font.SourceSans
-    label.TextSize = 14
-    label.TextColor3 = C3(255, 255, 255)
-    label.TextStrokeTransparency = 0
-    label.TextStrokeColor3 = C3(0, 0, 0)
-    label.TextXAlignment = Enum.TextXAlignment.Center
-    label.TextYAlignment = Enum.TextYAlignment.Center
     label.BackgroundTransparency = 0.4
     label.BackgroundColor3 = C3(20, 20, 25)
     label.Size = UDim2.fromOffset(120, 20)
     label.Text = ""
-    label.TextTransparency = 1   -- 默认隐藏文字，只留背景
+    label.TextTransparency = 1
     label.Visible = true
     label.Parent = fallbackGui
 
@@ -142,6 +135,25 @@ local function createNameLabel()
     corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = label
 
+    return label
+end
+
+-- 中文名字文字：单独 TextLabel，叠在背景上，居中
+local function createNameLabel()
+    local label = Instance.new("TextLabel")
+    label.AnchorPoint = Vector2.new(0.5, 0)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.SourceSans
+    label.TextSize = 14
+    label.TextColor3 = C3(255, 255, 255)
+    label.TextStrokeTransparency = 0
+    label.TextStrokeColor3 = C3(0, 0, 0)
+    label.TextXAlignment = Enum.TextXAlignment.Center
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    label.Size = UDim2.fromOffset(240, 20)
+    label.Text = ""
+    label.Visible = false
+    label.Parent = fallbackGui
     return label
 end
 
@@ -228,6 +240,7 @@ local function SetVisible(tbl, visible)
             d.HealthBarBg.Visible = false
             d.HealthBar.Visible = false
         end
+        if tbl.rowBg then tbl.rowBg.Visible = false end
         if tbl.nameLabel then tbl.nameLabel.Visible = false end
     end
 end
@@ -264,6 +277,7 @@ function EspLib:WrapObject(Args)
     local DisplayText = Args.DisplayText
 
     local d = CreateDrawings()
+    local rowBg = createRowBg()
     local nameLabel = createNameLabel()
 
     local TBL = {
@@ -280,6 +294,7 @@ function EspLib:WrapObject(Args)
         textColorFunc = nil,
         boxColorFunc = nil,
         DisplayText = DisplayText,
+        rowBg = rowBg,
         nameLabel = nameLabel,
         Connections = {},
     }
@@ -349,6 +364,7 @@ function EspLib:UnwrapObject(Object)
         c:Disconnect()
     end
 
+    if obj.rowBg then obj.rowBg:Destroy() end
     if obj.nameLabel then obj.nameLabel:Destroy() end
 
     DestroyDrawings(obj.Drawings)
@@ -511,6 +527,12 @@ RunService.RenderStepped:Connect(function()
 
         local startX = centerX - totalW * 0.5
 
+        -- 整行背景（覆盖全部三段）
+        local rowBg = TBL.rowBg
+        rowBg.Position = UDim2.fromOffset(startX - 6, nameTopY - 3)
+        rowBg.Size = UDim2.fromOffset(totalW + 12, nameH + 6)
+        rowBg.Visible = true
+
         -- 血量段
         if hpStr ~= "" then
             d.HpText.Visible = true
@@ -520,23 +542,20 @@ RunService.RenderStepped:Connect(function()
             d.HpText.Visible = false
         end
 
-        -- 名字段：TextLabel 统一承载背景，中文时显示文字
-        local lbl = TBL.nameLabel
-        lbl.Position = UDim2.fromOffset(startX, nameTopY - 3)
-        lbl.Size = UDim2.fromOffset(nameDisplayW, nameH + 6)
-        lbl.Visible = true
-
+        -- 名字段
         if nameCN then
             d.NameText.Visible = false
+            local lbl = TBL.nameLabel
             lbl.Text = nameTxt
             lbl.TextColor3 = nameColor
-            lbl.TextTransparency = 0
+            lbl.Position = UDim2.fromOffset(startX + nameDisplayW * 0.5, nameTopY)
+            lbl.Size = UDim2.fromOffset(nameDisplayW, nameH)
+            lbl.Visible = true
         else
+            if TBL.nameLabel then TBL.nameLabel.Visible = false end
             d.NameText.Visible = true
             d.NameText.Color = nameColor
             placeTextLeft(d.NameText, nameTxt, startX, nameTopY, TBL.NameCache)
-            lbl.Text = ""
-            lbl.TextTransparency = 1   -- 只留背景
         end
         startX = startX + nameDisplayW + gap
 
