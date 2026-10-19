@@ -4146,7 +4146,7 @@ function Starlight:CreateWindow(WindowSettings)
 					}
 					]]
 
-					ElementSettings.Style = ElementSettings.Style or 1
+					ElementSettings.Style = ElementSettings.Style or 2
 					ElementSettings.CurrentValue = ElementSettings.CurrentValue or false
 
 					local Element = {
@@ -6065,7 +6065,7 @@ function Starlight:CreateWindow(WindowSettings)
 								NestedElement.Instances[2].Container.Color.OldColor.Frame.BackgroundTransparency = NestedElement.Values.Transparency
 									or 0
 							end
-							
+
 							registerPopupCloser(NestedElement.Instances[2], close)
 							NestedElement.Instances[1]:GetPropertyChangedSignal("AbsolutePosition"):Connect(close)
 
