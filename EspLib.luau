@@ -107,7 +107,7 @@ do
     fallbackGui.Parent = parent
 end
 
--- 整行：背景 + 富文本（血量/名字/距离），全部在同一个 TextLabel
+-- 整行：背景 + 富文本，宽度自动
 local function createRowLabel()
     local label = Instance.new("TextLabel")
     label.AnchorPoint = Vector2.new(0.5, 1)
@@ -121,7 +121,8 @@ local function createRowLabel()
     label.RichText = true
     label.BackgroundTransparency = 0.4
     label.BackgroundColor3 = C3(20, 20, 25)
-    label.Size = UDim2.fromOffset(160, 20)
+    label.AutomaticSize = Enum.AutomaticSize.X
+    label.Size = UDim2.fromOffset(0, 20)
     label.Text = ""
     label.Visible = false
     label.Parent = fallbackGui
@@ -130,10 +131,15 @@ local function createRowLabel()
     corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = label
 
+    local padding = Instance.new("UIPadding")
+    padding.PaddingLeft = UDim.new(0, 8)
+    padding.PaddingRight = UDim.new(0, 8)
+    padding.Parent = label
+
     return label
 end
 
--- ===== Drawing 创建 =====
+-- ===== Drawing 创建（只保留方框、血条、射线） =====
 
 local function CreateDrawings()
     local d = {}
@@ -434,7 +440,7 @@ RunService.RenderStepped:Connect(function()
             end
         end
 
-        -- 拼 RichText
+        -- RichText 拼接
         local parts = {}
         if Humanoid then
             local hpInt = MathFloor(Humanoid.Health)
@@ -452,7 +458,6 @@ RunService.RenderStepped:Connect(function()
             lbl.Text = rowText
         end
         lbl.Visible = true
-        -- 位置：方框上方，AnchorPoint (0.5, 1) 使 Y 为文字底部
         lbl.Position = UDim2.fromOffset(centerX, y - 4)
 
         SetVisible(TBL, true)
