@@ -56,7 +56,7 @@ Subsections help to oraganize within subsections, and are smaller, breaking down
 
 Asterisks in Table Examples mean that the parameter is not required
 However, if there are 4 asterisks, it means that requirement of the parameter depends on another parameter
-Ellipsis means that unlimited parameters of the template provided are accepted within the table
+Ellipsis means that unlimited parametersparameters of the template provided are accepted within the table
 
 If you see --!nocheck and a few nil variables above before this, that is for the studio environment. It js means I forgot to remove them before publishing the release.
 
@@ -3879,7 +3879,7 @@ function Starlight:CreateWindow(WindowSettings)
 					}
 					]]
 
-					ElementSettings.Style = ElementSettings.Style or 2
+					ElementSettings.Style = ElementSettings.Style or 1
 
 					local Element = {
 						Values = ElementSettings,
