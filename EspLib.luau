@@ -237,6 +237,7 @@ function EspLib:WrapObject(Args)
 		rowLabel = rowLabel,
 		Connections = {},
 		lastRowText = nil,
+		Infos = Args.Infos,
 	}
 
 	EspLib.Objects[Object] = TBL
@@ -252,7 +253,7 @@ function EspLib:WrapObject(Args)
 		TBL.boxColor = color.Box
 	end
 
-	
+
 	TBL.DestroyingConn = Object.Destroying:Once(function()
 		EspLib:UnwrapObject(Object)
 	end)
@@ -401,7 +402,7 @@ RunService.RenderStepped:Connect(function()
 		end
 
 		local parts = {}
-		
+
 		if Humanoid then
 			local hp = Humanoid.Health
 			local maxHp = Humanoid.MaxHealth
@@ -427,15 +428,31 @@ RunService.RenderStepped:Connect(function()
 				local t = ratio / 0.5
 				d.HealthBar.Color = C3(150, 35, 35):Lerp(C3(180, 140, 0), t)
 			end
-			
+
 			local hpInt = MathFloor(hp)
 			parts[#parts + 1] = '<font color="' .. colorToHex(C3(80, 220, 120)) .. '">♥' .. hpInt .. '</font>'
 		end
-		
+
 		parts[#parts + 1] = '<font color="' .. colorToHex(nameColor) .. '">' .. nameTxt .. '</font>'
 		local distStr = MathFloor(MathSqrt(distSq)) .. "m"
 		parts[#parts + 1] = '<font color="' .. colorToHex(C3(160, 160, 170)) .. '">' .. distStr .. '</font>'
-
+		
+		if TBL.Infos then
+			for i,v in TBL.Infos do
+				local Text = v.Text
+				if typeof(Text) == "function" then
+					Text = Text(Object)
+				end
+				
+				local Color = v.Color
+				if typeof(Color) == "function" then
+					Color = Color(Object)
+				end
+				
+				parts[#parts + 1] = '<font color="' .. colorToHex(Color) .. '">' .. Text .. '</font>'
+			end
+		end
+		
 		local rowText = table.concat(parts, " ")
 
 		local lbl = TBL.rowLabel
