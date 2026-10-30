@@ -7561,6 +7561,14 @@ function Starlight:CreateWindow(WindowSettings)
 						Name = ElementSettings.Name or "",
 					}):AddDropdown(ElementSettings, Index)
 				end
+				
+				function Groupbox:CreateColorPicker(ElementSettings, Index)
+					Index = Index or GetRandomId()
+
+					return Groupbox:CreateLabel({
+						Name = ElementSettings.Name or "",
+					}):AddColorPicker(ElementSettings, Index)
+				end
 
 				function Groupbox:CreateParagraph(ElementSettings, Index)
 					Index = Index or GetRandomId()
